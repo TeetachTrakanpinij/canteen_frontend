@@ -7,7 +7,7 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Total Tables',
-      value: '24',
+      value: '25',
       icon: Coffee,
       color: 'orange',
       change: '+2 from last month'
