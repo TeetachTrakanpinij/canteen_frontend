@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Regis from "./pages/Signup";
 import Profile from "./pages/Profile";
+import Editprofile from "./pages/Editprofile";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Regis />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/editprofile" element={<Editprofile />} />
 
       </Routes>
     </Router>
