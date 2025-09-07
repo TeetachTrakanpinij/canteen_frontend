@@ -2,7 +2,7 @@ import { ChevronLeft } from "lucide-react";
 
 export default function Login() {
   return (
-    <div className="bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen">
+    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen">
         <div className="fixed">
                 {/* Back button */}
             <button
