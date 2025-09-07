@@ -6,16 +6,24 @@ export default function LoginSuccess() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const tokenParam = params.get("token");
 
-    if (token) {
-      // เก็บ token ไว้ localStorage / cookie
-      localStorage.setItem("token", token);
-      navigate("/home"); // ไปหน้าแรก
+    if (tokenParam) {
+      const token = decodeURIComponent(tokenParam); // 🔹 decode ก่อนใช้งาน
+      localStorage.setItem("authToken", token);
+
+      // 🔹 ให้ redirect หลังจากเก็บ token เสร็จ
+      setTimeout(() => {
+        navigate("/profile", { replace: true });
+      }, 100); // 100ms เผื่อ async rendering
     } else {
-      navigate("/login"); // ถ้าไม่มี token
+      navigate("/login", { replace: true });
     }
   }, [navigate]);
 
-  return <p>กำลังเข้าสู่ระบบ...</p>;
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <p className="text-lg">กำลังเข้าสู่ระบบ...</p>
+    </div>
+  );
 }
