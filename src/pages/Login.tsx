@@ -54,7 +54,7 @@ export default function Login() {
         </button>
       </div>
 
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen px-8">
         <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8">
           <h1 className="text-2xl font-bold text-center mb-6">
             Smart Canteen Log In
