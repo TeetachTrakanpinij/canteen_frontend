@@ -10,7 +10,7 @@ export default function Regis() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -55,7 +55,7 @@ export default function Regis() {
         </button>
       </div>
 
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen px-8">
         <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8">
           <h1 className="text-2xl font-bold text-center mb-6">
             Smart Canteen Sign Up

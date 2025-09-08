@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, BookOpenText, PencilLine, Mail, Lock, UserRound } from "lucide-react";
+import { Link } from "react-router-dom";
+
+interface User {
+  name: string;
+  nickname: string;
+  email: string;
+  imageProfile?: string;
+}
 
 export default function Profile() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -39,9 +47,12 @@ export default function Profile() {
           <button className="flex items-center gap-2 border border-gray-300 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 w-full sm:w-auto justify-center sm:justify-start">
             <BookOpenText className="w-5 h-5" /> User manual
           </button>
-          <button className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 w-full sm:w-auto justify-center sm:justify-start">
+          <Link
+            to="/editprofile"
+            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 w-full sm:w-auto justify-center sm:justify-start"
+          >
             <PencilLine className="w-5 h-5" /> Edit Profile
-          </button>
+          </Link>
         </div>
       </div>
 

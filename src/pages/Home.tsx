@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
-    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen flex flex-col items-center justify-center text-white">
+    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen flex flex-col items-center justify-center text-white text-center">
       <h1 className="text-4xl font-bold mb-6">Welcome to Smart Canteen</h1>
       <p className="text-lg mb-10">Your smart way to order and enjoy food 🍴</p>
 
