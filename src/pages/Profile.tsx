@@ -1,69 +1,42 @@
-import { useEffect, useState } from "react";
 import { ChevronLeft, BookOpenText, PencilLine, Mail, Lock, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
-
-interface User {
-  name: string;
-  nickname: string;
-  email: string;
-  imageProfile?: string;
-}
+import { useUser } from "../contexts/UserContext";
 
 export default function Profile() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (!token) return;
-
-    fetch("https://canteen-backend-ten.vercel.app/api/user/profile", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(res => res.json())
-      .then(data => {
-        setUser(data); // data ควรมี { name, nickname, email, imageProfile }
-      })
-      .catch(err => console.error(err));
-  }, []);
+  const { user } = useUser();
 
   if (!user) return <p className="p-4">Loading...</p>;
 
   return (
     <div className="bg-white min-h-screen p-4 sm:p-6">
       {/* Top Section */}
-      <div className="flex w-full justify-between items-center mt-4">
-        <div className="flex flex-col">
-          {/* แถวบน: ลูกศร + Profile */}
-          <div className="flex items-center space-x-2">
-            <button onClick={() => window.history.back()} className="mt-1">
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">Profile</h1>
+      <div className="flex flex-row justify-between items-center mt-4 w-full">
+        <div className="flex items-center gap-3 max-w-[70%]">
+          <button onClick={() => window.history.back()} className="p-2 rounded-full hover:bg-gray-100 flex-shrink-0">
+            <ChevronLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold">Profile</h1>
+            <p className="text-gray-500 text-sm">Manage your account and change password</p>
           </div>
-
-          {/* แถวล่าง: คำอธิบาย */}
-          <p className="text-gray-500 text-sm sm:text-base leading-snug mt-1 ml-8">
-            Manage your account and change password
-          </p>
         </div>
-        <div className="flex gap-3 ">
-          {/* ปุ่ม User manual */}
-          <button className="p-2 rounded-full hover:bg-gray-200">
+        <div className="flex gap-2 flex-shrink-0">
+          {/* User Manual */}
+          <button className="p-2 rounded-full border border-gray-300 hover:bg-gray-100">
             <BookOpenText className="w-6 h-6 text-gray-700" />
           </button>
-          {/* ปุ่ม Edit Profile */}
-          <Link
-            to="/editprofile"
-            className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white shadow hover:opacity-90"
-          >
-            <PencilLine className="w-6 h-6" />
-          </Link>
-        </div>
+
+          {/* Edit Profile */}
+        <Link
+          to="/editprofile"
+          className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 hover:opacity-90"
+        >
+          <PencilLine className="w-6 h-6 text-white" />
+        </Link>
       </div>
+    </div>
       {/* Profile Card */}
-      <div className="flex justify-center mt-8 sm:mt-12">
+      <div className="flex flex-col items-center mt-20 sm:mt-10">
         <div className="bg-white border rounded-2xl shadow p-6 sm:p-8 w-full max-w-sm text-center">
           {/* Avatar */}
           <div className="flex justify-center mb-4">
