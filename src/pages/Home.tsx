@@ -5,9 +5,16 @@ export default function Home() {
   return (
     <div className="font-thai bg-white min-h-screen flex flex-col">
       {/* Header */}
-      <header className="flex justify-between items-center p-4 border-b">
+      <header className="relative flex items-center justify-between p-4 border-b">
+        {/* Logo */}
         <div className="font-bold text-xl">Logo</div>
-        <h1 className="text-orange-500 font-semibold text-lg ">All Canteen</h1>
+
+        {/* All Canteen (ตรงกลางเสมอ) */}
+        <h1 className="absolute left-1/2 transform -translate-x-1/2 text-orange-500 font-semibold text-lg">
+          All Canteen
+        </h1>
+
+        {/* Language + Profile */}
         <div className="flex items-center gap-2">
           {/* Language Switch */}
           <div className="flex items-center border rounded-full overflow-hidden text-sm">
@@ -27,7 +34,8 @@ export default function Home() {
       {/* Welcome text */}
       <main className="flex flex-col items-center flex-1 mt-6">
         <p className="text-lg">
-          Welcome ~ <span className="text-orange-500 font-semibold ">Name</span>
+          Welcome ~{" "}
+          <span className="text-orange-500 font-semibold">Name</span>
         </p>
 
         {/* Canteen list */}
@@ -63,3 +71,4 @@ export default function Home() {
     </div>
   );
 }
+
