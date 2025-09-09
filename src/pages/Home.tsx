@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { User } from "lucide-react";
+import Logo from "../assets/logo.png"
 
 export default function Home() {
   const [lang, setLang] = useState<"th" | "en">("en");
@@ -31,8 +32,10 @@ export default function Home() {
       {/* Header */}
       <header className="relative flex items-center justify-between p-4 border-b">
         {/* Logo */}
-        <div className="font-bold text-xl">Logo</div>
-
+        <div>
+          <img src={Logo} alt="Logo" className="h-10 w-32 object-contain" />
+        </div>
+        
         {/* All Canteen (ตรงกลางเสมอ) */}
         <h1 className="absolute left-1/2 transform -translate-x-1/2 text-orange-500 font-semibold text-lg">
           {t.allCanteen}

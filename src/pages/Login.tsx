@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
+import Logo from "../assets/logo.png"
 
 export default function Login() {
   const navigate = useNavigate();
@@ -52,8 +53,14 @@ export default function Login() {
         </button>
       </div>
 
-      <div className="flex items-center justify-center h-screen px-8">
-        <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8">
+      <div className="flex flex-col items-center min-h-screen px-8">
+        {/* Logo อยู่เหนือ card */}
+        <img
+          src={Logo} alt="Logo"
+          className="w-32 h-32 mb-6 object-contain mt-7"
+        />
+        <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8 mt-5">
+
           <h1 className="text-2xl font-bold text-center mb-6">
             Smart Canteen Log In
           </h1>

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import VerifyPopup from "../components/VerifyPopup";
+import Logo from "../assets/logo.png"
 
 export default function Regis() {
   const [name, setName] = useState("");
@@ -59,15 +60,20 @@ export default function Regis() {
   };
 
   return (
-    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen">
+    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] min-h-screen">
       <div className="fixed">
         <button onClick={() => (window.location.href = "/")}>
           <ChevronLeft className="w-10 h-10 ml-10 mt-10 text-icon" />
         </button>
       </div>
 
-      <div className="flex items-center justify-center h-screen px-8">
-        <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8">
+      <div className="flex flex-col items-center min-h-screen px-8">
+        {/* Logo อยู่เหนือ card */}
+        <img
+          src={Logo} alt="Logo"
+          className="w-32 h-32  mb-6 object-contain mt-7"
+        />
+        <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8 mt-5">
           <h1 className="text-2xl font-bold text-center mb-6">
             Smart Canteen Sign Up
           </h1>
