@@ -13,7 +13,7 @@ export default function Home() {
       name: "Name",
       canteenA: "Canteen A",
       canteenB: "Canteen B",
-      canteenC: "Canteen C",
+      canteenJ: "Canteen J",
     },
     th: {
       allCanteen: "โรงอาหารทั้งหมด",
@@ -21,7 +21,7 @@ export default function Home() {
       name: "ชื่อ",
       canteenA: "โรงอาหาร A",
       canteenB: "โรงอาหาร B",
-      canteenC: "โรงอาหาร C",
+      canteenJ: "โรงอาหาร J",
     },
   };
 
@@ -101,10 +101,10 @@ export default function Home() {
 
           {/* Canteen C */}
           <Link
-            to="/canteen-c"
+            to="/canteen/j"
             className="flex justify-between items-center border-2 border-green-400 rounded-xl px-4 py-3 shadow hover:bg-green-50 transition"
           >
-            <span>{t.canteenC}</span>
+            <span>{t.canteenJ}</span>
             <span>10/50</span>
           </Link>
         </div>
