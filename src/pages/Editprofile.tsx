@@ -29,7 +29,7 @@ export default function EditProfile() {
     if (form.imageFile) formData.append("image", form.imageFile);
 
     setSaving(true);
-    fetch("https://canteen-backend-ten.vercel.app/api/user/profile", {
+    fetch("https://canteen-backend-igyy.onrender.com/api/user/profile", {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -51,7 +51,7 @@ export default function EditProfile() {
   if (!user) return <p className="p-4">Loading...</p>;
 
   return (
-    <div className="bg-white min-h-screen p-4 sm:p-6">
+    <div className="bg-white min-h-screen p-4 sm:p-6 mt-6">
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => navigate(-1)}>
           <ChevronLeft className="w-6 h-6 text-gray-700" />
