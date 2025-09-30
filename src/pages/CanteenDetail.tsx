@@ -69,8 +69,9 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
   }[lang];
 
   useEffect(() => {
+    if (!canteenId) return;
+
     const fetchCanteen = async () => {
-      if (!canteenId) return;
       try {
         const res = await fetch(
           `https://canteen-backend-igyy.onrender.com/api/canteen/${canteenId}`
@@ -83,7 +84,15 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
         setLoading(false);
       }
     };
+
+    // เรียกครั้งแรก
     fetchCanteen();
+
+    // ตั้ง interval ทุก 3 วิ
+    const interval = setInterval(fetchCanteen, 3000);
+
+    // ล้าง interval ตอน unmount
+    return () => clearInterval(interval);
   }, [canteenId]);
 
   if (loading) return <p className="p-4">{t.loading}</p>;
@@ -145,7 +154,6 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
         <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b-2 border-gray-300 pb-2">
           {t.zone} {zone.name}
         </h2>
-
 
         {/* Tables */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

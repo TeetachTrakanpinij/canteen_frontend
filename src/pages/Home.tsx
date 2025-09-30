@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { FiClipboard } from "react-icons/fi";
+import { QrReader } from "react-qr-reader";
 
 interface Canteen {
   _id: string;
@@ -14,6 +16,14 @@ interface UserData {
   nickname?: string;
 }
 
+interface Reservation {
+  _id: string;
+  tableID: string;
+  userID: string;
+  duration_minutes: number;
+  reserved_at: string;
+}
+
 interface HomeProps {
   lang: "th" | "en";
 }
@@ -22,9 +32,22 @@ export default function Home({ lang }: HomeProps) {
   const [user, setUser] = useState<UserData | null>(null);
   const [canteens, setCanteens] = useState<Canteen[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
 
   const token = localStorage.getItem("authToken");
   const isLoggedIn = !!token;
+
+  // โหลด reservation จาก localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("activeReservation");
+    if (saved) {
+      const resData: Reservation = JSON.parse(saved);
+      if (resData?._id) setReservation(resData);
+    }
+  }, []);
 
   // Fetch canteens
   useEffect(() => {
@@ -61,11 +84,10 @@ export default function Home({ lang }: HomeProps) {
 
     const fetchUser = async () => {
       try {
-        const res = await fetch("https://canteen-backend-igyy.onrender.com/api/user/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          "https://canteen-backend-igyy.onrender.com/api/user/profile",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         if (!res.ok) throw new Error("Failed to fetch user");
         const data: UserData = await res.json();
         setUser(data);
@@ -76,6 +98,75 @@ export default function Home({ lang }: HomeProps) {
 
     fetchUser();
   }, [isLoggedIn, token]);
+
+  const handleCancel = async () => {
+    if (!reservation) return;
+
+    try {
+      const res = await fetch(
+        `https://canteen-backend-igyy.onrender.com/api/reservation/${reservation._id}/cancel`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!res.ok) throw new Error("ยกเลิกไม่สำเร็จ");
+
+      setReservation(null);
+      localStorage.removeItem("activeReservation");
+      setShowPopup(false);
+      setScanning(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleScanQR = async (scannedText: string) => {
+    try {
+      if (!reservation) throw new Error("ไม่มีการจองให้สแกน");
+
+      const res = await fetch(
+        `https://canteen-backend-igyy.onrender.com/api/reservation/${reservation._id}/checkin`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ qrData: scannedText }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Server error ${res.status}: ${text}`);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        console.log("Scan success:", data);
+        alert("สแกนสำเร็จ! โต๊ะถูกเปลี่ยนสถานะเป็น unavailable");
+
+        setScanning(false);
+        setShowPopup(false);
+
+        // ลบ reservation หลัง scan เสร็จ
+        setReservation(null);
+        localStorage.removeItem("activeReservation");
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        setScanError("สแกน QR ไม่สำเร็จ: server ส่งข้อมูลไม่ถูกต้อง");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setScanError(err.message);
+    }
+  };
 
   const t = {
     th: { welcome: "ยินดีต้อนรับ", name: "ผู้ใช้", loading: "กำลังโหลด..." },
@@ -119,6 +210,85 @@ export default function Home({ lang }: HomeProps) {
           )}
         </div>
       </main>
+
+      {/* Floating reservation button */}
+      {reservation && (
+        <>
+          <button
+            onClick={() => setShowPopup(true)}
+            className="fixed bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition"
+          >
+            <FiClipboard size={24} />
+          </button>
+
+          {showPopup && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+              <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+                <h2 className="text-xl font-bold mb-3 text-gray-800">
+                  การจองของคุณ
+                </h2>
+                <p className="mb-3 text-gray-700 text-sm">
+                  คุณได้จองโต๊ะเรียบร้อยแล้ว
+                  <br />
+                  เลือกการกระทำต่อไป
+                </p>
+
+                {!scanning ? (
+                  <div className="flex justify-between gap-3">
+                    <button
+                      onClick={() => {
+                        setScanning(true);
+                        setScanError("");
+                      }}
+                      className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition text-sm"
+                    >
+                      สแกน QR Code
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition text-sm"
+                    >
+                      ยกเลิกการจอง
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <QrReader
+                      onResult={(result, error) => {
+                        if (result) {
+                          const scannedText = result.getText(); // ใช้ getText() แทน result.text
+                          handleScanQR(scannedText);
+                        }
+                        if (error) console.error(error);
+                      }}
+                      constraints={{ facingMode: "environment" }}
+                      containerStyle={{ width: "100%" }}
+                    />
+
+                    {scanError && (
+                      <p className="text-red-500 text-sm">{scanError}</p>
+                    )}
+                    <button
+                      onClick={() => setScanning(false)}
+                      className="mt-2 text-gray-500 underline text-sm"
+                    >
+                      ยกเลิกสแกน
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="mt-3 text-gray-500 underline text-sm"
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
