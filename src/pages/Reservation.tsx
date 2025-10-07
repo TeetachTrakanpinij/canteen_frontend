@@ -85,6 +85,8 @@ export default function ReservationPage() {
 
         {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
 
+        <p className="mb-5 text-red-500">* เมื่อถึงโต๊ะกรุณาสแกน QR เพื่อยืนยัน *</p>
+
         <button
           onClick={handleReservation}
           disabled={loading}

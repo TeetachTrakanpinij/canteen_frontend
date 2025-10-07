@@ -50,29 +50,29 @@ export default function Home({ lang }: HomeProps) {
   }, []);
 
   // Fetch canteens
-  useEffect(() => {
-    const fetchCanteens = async () => {
-      try {
-        const res = await fetch(
-          "https://canteen-backend-igyy.onrender.com/api/canteen/",
-          {
-            headers: token
-              ? {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                }
-              : undefined,
-          }
-        );
-        const data: Canteen[] = await res.json();
-        setCanteens(data);
-      } catch (err) {
-        console.error("Error fetching canteens:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchCanteens = async () => {
+    try {
+      const res = await fetch(
+        "https://canteen-backend-igyy.onrender.com/api/canteen/",
+        {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              }
+            : undefined,
+        }
+      );
+      const data: Canteen[] = await res.json();
+      setCanteens(data);
+    } catch (err) {
+      console.error("Error fetching canteens:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCanteens();
     const interval = setInterval(fetchCanteens, 3000);
     return () => clearInterval(interval);
@@ -124,6 +124,7 @@ export default function Home({ lang }: HomeProps) {
     }
   };
 
+  // ✅ แก้เฉพาะส่วนนี้เท่านั้น
   const handleScanQR = async (scannedText: string) => {
     try {
       if (!reservation) throw new Error("ไม่มีการจองให้สแกน");
@@ -131,12 +132,12 @@ export default function Home({ lang }: HomeProps) {
       const res = await fetch(
         `https://canteen-backend-igyy.onrender.com/api/reservation/${reservation._id}/checkin`,
         {
-          method: "POST",
+          method: "PUT", // ✅ เปลี่ยนจาก POST → PUT
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ qrData: scannedText }),
+          body: JSON.stringify({ qrData: scannedText }), // ✅ ส่ง URL จาก QR ที่สแกนได้
         }
       );
 
@@ -145,23 +146,16 @@ export default function Home({ lang }: HomeProps) {
         throw new Error(`Server error ${res.status}: ${text}`);
       }
 
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        console.log("Scan success:", data);
-        alert("สแกนสำเร็จ! โต๊ะถูกเปลี่ยนสถานะเป็น unavailable");
+      const data = await res.json();
+      console.log("Scan success:", data);
+      alert("✅ สแกนสำเร็จ! โต๊ะถูกเปลี่ยนสถานะเป็น unavailable");
 
-        setScanning(false);
-        setShowPopup(false);
+      setScanning(false);
+      setShowPopup(false);
+      setReservation(null);
+      localStorage.removeItem("activeReservation");
 
-        // ลบ reservation หลัง scan เสร็จ
-        setReservation(null);
-        localStorage.removeItem("activeReservation");
-      } else {
-        const text = await res.text();
-        console.error("Non-JSON response:", text);
-        setScanError("สแกน QR ไม่สำเร็จ: server ส่งข้อมูลไม่ถูกต้อง");
-      }
+      await fetchCanteens(); // ✅ อัปเดตตารางหลังสแกน
     } catch (err: any) {
       console.error(err);
       setScanError(err.message);
@@ -256,7 +250,7 @@ export default function Home({ lang }: HomeProps) {
                     <QrReader
                       onResult={(result, error) => {
                         if (result) {
-                          const scannedText = result.getText(); // ใช้ getText() แทน result.text
+                          const scannedText = result.getText();
                           handleScanQR(scannedText);
                         }
                         if (error) console.error(error);
@@ -291,4 +285,5 @@ export default function Home({ lang }: HomeProps) {
     </div>
   );
 }
+
 
