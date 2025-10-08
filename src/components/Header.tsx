@@ -106,17 +106,20 @@ export default function Header({ lang, setLang }: HeaderProps) {
       <div className="flex items-center">{pageLogo}</div>
 
       {/* Center: Page Title */}
-      <h1 className="absolute left-1/2 transform -translate-x-1/2 text-orange-500 font-bold text-lg md:text-xl truncate max-w-[60%] text-center">
+      <h1
+        className="text-orange-500 font-bold text-base sm:text-lg md:text-xl truncate text-center
+  relative mx-auto w-[70%] sm:w-auto sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:max-w-[60%]"
+      >
         {pageTitle}
       </h1>
 
       {/* Right: Language + Profile */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Language Switch */}
-        <div className="flex items-center border rounded-full overflow-hidden text-sm shadow-sm">
+        <div className="flex items-center border rounded-full overflow-hidden text-xs sm:text-sm shadow-sm">
           <button
             onClick={() => setLang("th")}
-            className={`px-2 sm:px-3 py-1 transition-colors text-xs sm:text-sm ${
+            className={`px-2 sm:px-3 py-1 transition-colors ${
               lang === "th"
                 ? "bg-orange-500 text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -126,7 +129,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
           </button>
           <button
             onClick={() => setLang("en")}
-            className={`px-2 sm:px-3 py-1 transition-colors text-xs sm:text-sm ${
+            className={`px-2 sm:px-3 py-1 transition-colors ${
               lang === "en"
                 ? "bg-orange-500 text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -139,7 +142,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
         {/* Profile */}
         <Link
           to={user ? "/profile" : "/login"}
-          className="rounded-full border overflow-hidden w-11 h-11 flex items-center justify-center hover:shadow-md transition-shadow"
+          className="rounded-full border overflow-hidden w-10 h-10 flex items-center justify-center hover:shadow-md transition-shadow"
         >
           {user?.imageProfile ? (
             <img
@@ -155,3 +158,4 @@ export default function Header({ lang, setLang }: HeaderProps) {
     </header>
   );
 }
+
