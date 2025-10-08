@@ -85,7 +85,7 @@ export default function Profile() {
         <button
           onClick={() => {
             localStorage.removeItem("authToken");
-            window.location.href = "/login";
+            window.location.href = "/";
           }}
           className="border border-gray-400 px-6 py-2 rounded-lg hover:bg-gray-100 w-full sm:w-auto"
         >
