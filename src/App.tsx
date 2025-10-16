@@ -16,7 +16,7 @@ import Profile from "./pages/Profile";
 import Editprofile from "./pages/Editprofile";
 import ReservationPage from "./pages/Reservation";
 import ActivatePage from "./pages/Activate";
-import GuidePage from "./pages/Guidepage";
+import GuidePage from "./pages/GuidePage";
 
 export default function App() {
   const [lang, setLang] = useState<"th" | "en">("th");
