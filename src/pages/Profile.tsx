@@ -32,9 +32,12 @@ export default function Profile() {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           {/* User Manual */}
-          <button className="p-2 rounded-full border border-gray-300 hover:bg-gray-100">
+          <Link
+            to="/guide"
+            className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition"
+          >
             <BookOpenText className="w-6 h-6 text-gray-700" />
-          </button>
+          </Link>
 
           {/* Edit Profile */}
         <Link
