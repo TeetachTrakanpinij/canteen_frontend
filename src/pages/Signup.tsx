@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import VerifyPopup from "../components/VerifyPopup";
-import Logo from "../assets/logo.png"
+import Logo from "../assets/logo.png";
 
 export default function Regis() {
   const [name, setName] = useState("");
@@ -32,7 +32,7 @@ export default function Regis() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, confirmPassword })
+          body: JSON.stringify({ name, email, password, confirmPassword }),
         }
       );
 
@@ -41,15 +41,13 @@ export default function Regis() {
 
       if (!res.ok) {
         setError(data.message || "Something went wrong!");
-      } else {
-        setSuccess("Account created successfully!");
-
-        // ✅ ใช้ token จริงจาก backend หรือ fallback token
-        setVerifyToken(data.token || "dummy-token");
+      } else if (data.token) {
+        // สมัครสำเร็จจริง
+        setSuccess("Account created successfully! Please check your email to verify your account.");
+        setVerifyToken(data.token);
         setShowPopup(true);
-
-        // ถ้าอยาก redirect ไป login หลัง 1.5 วิ
-        // setTimeout(() => (window.location.href = "/login"), 1500);
+      } else {
+        setError("Account could not be created. Please try again.");
       }
     } catch (err) {
       console.error(err);
@@ -68,10 +66,10 @@ export default function Regis() {
       </div>
 
       <div className="flex flex-col items-center min-h-screen px-8">
-        {/* Logo อยู่เหนือ card */}
         <img
-          src={Logo} alt="Logo"
-          className="w-32 h-32  mb-6 object-contain mt-7"
+          src={Logo}
+          alt="Logo"
+          className="w-32 h-32 mb-6 object-contain mt-7"
         />
         <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8 mt-5">
           <h1 className="text-2xl font-bold text-center mb-6">
@@ -124,19 +122,24 @@ export default function Regis() {
             </button>
           </form>
 
-          <p className="text-sm text-center text-gray-600 mt-4">
-            Already have an account?{" "}
-            <a href="/login" className="text-[#FF8001] hover:underline">
-              Log In Here!
-            </a>
-          </p>
+          {/* ✅ ซ่อนข้อความจนกว่าจะสมัครสำเร็จ */}
+          {!success && (
+            <p className="text-sm text-center text-gray-600 mt-4">
+              Already have an account?{" "}
+              <a href="/login" className="text-[#FF8001] hover:underline">
+                Log In Here!
+              </a>
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ✅ แสดง popup */}
+      {/* ✅ แสดง popup ก็ต่อเมื่อมี token จริง */}
       {showPopup && verifyToken && (
         <VerifyPopup token={verifyToken} onClose={() => setShowPopup(false)} />
       )}
     </div>
   );
 }
+
+

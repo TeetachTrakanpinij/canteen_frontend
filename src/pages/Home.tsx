@@ -22,6 +22,7 @@ interface Reservation {
   userID: string;
   duration_minutes: number;
   reserved_at: string;
+  checked_in?: boolean;
 }
 
 interface HomeProps {
@@ -51,6 +52,48 @@ export default function Home({ lang }: HomeProps) {
       if (resData?._id) setReservation(resData);
     }
   }, []);
+
+  // ตรวจจับเวลาหมดอายุการจอง
+  useEffect(() => {
+    if (!reservation) return;
+
+    const reservedAt = new Date(reservation.reserved_at).getTime();
+    const now = Date.now();
+    const durationMs = reservation.duration_minutes * 60 * 1000;
+    const remainingTime = reservedAt + durationMs - now;
+
+    if (remainingTime <= 0) {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการจอง โต๊ะกลับเป็นว่างแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการจอง โต๊ะกลับเป็นว่างแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+    }, remainingTime);
+
+    return () => clearTimeout(timer);
+  }, [reservation]);
+
+  // ปุ่มหายหลังเช็กอินแล้วครบเวลา
+  useEffect(() => {
+    if (!reservation?.checked_in) return;
+
+    const afterCheckInTime = reservation.duration_minutes * 60 * 1000; // ใช้เวลาที่จองจริง
+    const timer = setTimeout(() => {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการใช้งานโต๊ะแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+    }, afterCheckInTime);
+
+    return () => clearTimeout(timer);
+  }, [reservation?.checked_in]);
 
   // Fetch canteens
   const fetchCanteens = async () => {
@@ -135,7 +178,6 @@ export default function Home({ lang }: HomeProps) {
   // สแกน QR
   const handleScanQR = async (scannedText: string) => {
     const tableId = scannedText.trim();
-
     try {
       const res = await fetch(
         `https://canteen-backend-igyy.onrender.com/api/tables/${tableId}/checkin`,
@@ -147,26 +189,38 @@ export default function Home({ lang }: HomeProps) {
           },
         }
       );
-
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Server error ${res.status}: ${text}`);
       }
-
       const data = await res.json();
       console.log("Scan success:", data);
 
-      // แสดง notification ครั้งเดียว
+      // อัปเดตสถานะ checked_in
+      if (reservation) {
+        const updatedReservation: Reservation = {
+          ...reservation,
+          checked_in: true,
+          _id: reservation._id || "",
+          tableID: reservation.tableID || "",
+          userID: reservation.userID || "",
+          duration_minutes: reservation.duration_minutes ?? 10,
+          reserved_at: reservation.reserved_at || new Date().toISOString(),
+        };
+        setReservation(updatedReservation);
+        localStorage.setItem("activeReservation", JSON.stringify(updatedReservation));
+      }
+
       setNotification(`✅ เช็คอินสำเร็จ คุณ${user?.nickname ?? user?.name ?? ""}`);
       setTimeout(() => setNotification(""), 3000);
 
-      setScanning(false); // ปิด QR reader แต่ **ไม่ลบ reservation**
+      setScanning(false);
       setShowPopup(false);
       await fetchCanteens();
     } catch (err: any) {
       console.error(err);
       setScanError(err.message);
-      scanProcessedRef.current = false; // ให้ลองสแกนใหม่
+      scanProcessedRef.current = false;
     }
   };
 
@@ -212,7 +266,6 @@ export default function Home({ lang }: HomeProps) {
           )}
         </div>
 
-        {/* Notification */}
         {notification && (
           <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
             {notification}
@@ -220,7 +273,6 @@ export default function Home({ lang }: HomeProps) {
         )}
       </main>
 
-      {/* Floating reservation button */}
       {reservation && (
         <>
           <button
@@ -236,9 +288,7 @@ export default function Home({ lang }: HomeProps) {
           {showPopup && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
               <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                <h2 className="text-xl font-bold mb-3 text-gray-800">
-                  การจองของคุณ
-                </h2>
+                <h2 className="text-xl font-bold mb-3 text-gray-800">การจองของคุณ</h2>
                 <p className="mb-3 text-gray-700 text-sm">
                   คุณได้จองโต๊ะเรียบร้อยแล้ว
                   <br />
@@ -278,9 +328,7 @@ export default function Home({ lang }: HomeProps) {
                       constraints={{ facingMode: "environment" }}
                       containerStyle={{ width: "100%" }}
                     />
-                    {scanError && (
-                      <p className="text-red-500 text-sm">{scanError}</p>
-                    )}
+                    {scanError && <p className="text-red-500 text-sm">{scanError}</p>}
                     <button
                       onClick={() => setScanning(false)}
                       className="mt-2 text-gray-500 underline text-sm"
@@ -304,12 +352,3 @@ export default function Home({ lang }: HomeProps) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
