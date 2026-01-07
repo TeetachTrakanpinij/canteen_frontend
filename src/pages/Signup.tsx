@@ -1,19 +1,17 @@
 // pages/Regis.tsx
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import VerifyPopup from "../components/VerifyPopup";
 import Logo from "../assets/logo.png"
 
 export default function Regis() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [verifyToken, setVerifyToken] = useState<string | null>(null);
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,7 +30,7 @@ export default function Regis() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, confirmPassword })
+          body: JSON.stringify({ name, username, password, confirmPassword })
         }
       );
 
@@ -44,12 +42,7 @@ export default function Regis() {
       } else {
         setSuccess("Account created successfully!");
 
-        // ✅ ใช้ token จริงจาก backend หรือ fallback token
-        setVerifyToken(data.token || "dummy-token");
-        setShowPopup(true);
-
-        // ถ้าอยาก redirect ไป login หลัง 1.5 วิ
-        // setTimeout(() => (window.location.href = "/login"), 1500);
+  
       }
     } catch (err) {
       console.error(err);
@@ -88,10 +81,10 @@ export default function Regis() {
               required
             />
             <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#FF8001]"
               required
             />
@@ -133,10 +126,7 @@ export default function Regis() {
         </div>
       </div>
 
-      {/* ✅ แสดง popup */}
-      {showPopup && verifyToken && (
-        <VerifyPopup token={verifyToken} onClose={() => setShowPopup(false)} />
-      )}
+      
     </div>
   );
 }
