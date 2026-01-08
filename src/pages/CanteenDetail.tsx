@@ -14,20 +14,29 @@ interface Zone {
   tables?: Table[];
 }
 
+interface Inn {
+  _id: string;
+  name: string | null;
+  arduinoSensor: boolean;
+}
+
 interface Canteen {
   _id: string;
   name: string;
   zones?: Zone[];
+  inns?: Inn[];
 }
 
 interface CanteenDetailProps {
   lang: "th" | "en";
 }
 
+
 export default function CanteenDetail({ lang }: CanteenDetailProps) {
   const { canteenId } = useParams<{ canteenId?: string }>();
   const [canteen, setCanteen] = useState<Canteen | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [filterStatus, setFilterStatus] =
     useState<"All" | "Available" | "Reserved" | "Unavailable">("All");
 
@@ -84,6 +93,8 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
     return () => clearInterval(interval);
   }, [canteenId]);
 
+
+
   if (loading) return <p className="p-4">{t.loading}</p>;
   if (!canteen) return <p className="p-4 text-red-500">{t.notFound}</p>;
 
@@ -128,16 +139,25 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       <div className="bg-white border-2 border-gray-300 rounded-xl p-4 overflow-x-auto">
 
         {/* Shops */}
-        <div className="grid grid-cols-5 gap-3 mb-6">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="border-2 border-black h-14 flex items-center justify-center font-semibold"
-            >
-              ร้าน
-            </div>
-          ))}
-        </div>
+          <div className="grid grid-cols-6 gap-3 mb-6">
+            {canteen.inns?.map((inn) => {
+              const isOpen = inn.arduinoSensor === true;
+
+              return (
+                <div
+                  key={inn._id}
+                  className={`h-14 border-2 flex items-center justify-center font-semibold
+                    ${
+                      isOpen
+                        ? "bg-green-100 border-green-600"
+                        : "bg-gray-300 border-gray-500"
+                    }`}
+                >
+                  {inn.name ?? "ร้าน"}
+                </div>
+              );
+            })}
+          </div>
 
         {/* MAP BODY */}
         <div className="grid grid-cols-[6fr_1fr_3fr] gap-4">
