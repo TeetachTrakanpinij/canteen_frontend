@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import Editprofile from "./pages/Editprofile";
 import ReservationPage from "./pages/Reservation";
 import ActivatePage from "./pages/Activate";
+import MenuPage from "./pages/Menu";
 
 export default function App() {
   const [lang, setLang] = useState<"th" | "en">("th");
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/" element={<Home lang={lang} />} />
             <Route path="/canteen/:canteenId" element={<CanteenDetail lang={lang} />} />
             <Route path="/tables/:tableId" element={<ReservationPage />} />
+            <Route path="/menu" element={<MenuPage />} />
           </Route>
 
           {/* กลุ่มที่ไม่มี Header */}
