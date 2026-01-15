@@ -28,11 +28,13 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* ===== MODAL STATES (เพิ่ม) ===== */
+  /* ===== MODAL STATES (เพิ่ม / แก้ไข) ===== */
   const [showModal, setShowModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState("");
-  const [menuPrice, setMenuPrice] = useState<number>(0);
+
+  // 🔧 แก้ตรงนี้: ให้ราคาพิมพ์เลขได้ลื่น
+  const [menuPrice, setMenuPrice] = useState<number | "">("");
 
   /* ===== FETCH INN ===== */
   const fetchInn = () => {
@@ -62,7 +64,7 @@ const MenuPage = () => {
   const openAddModal = () => {
     setEditingMenu(null);
     setMenuName("");
-    setMenuPrice(0);
+    setMenuPrice("");
     setShowModal(true);
   };
 
@@ -75,7 +77,8 @@ const MenuPage = () => {
 
   /* ===== SAVE (ADD / EDIT) ===== */
   const handleSave = () => {
-    if (!menuName || menuPrice <= 0) return;
+    // 🔧 แก้ตรงนี้: ป้องกันราคาว่าง
+    if (!menuName || menuPrice === "" || menuPrice <= 0) return;
 
     // EDIT
     if (editingMenu) {
@@ -198,12 +201,18 @@ const MenuPage = () => {
               onChange={(e) => setMenuName(e.target.value)}
             />
 
+            {/* 🔧 แก้เฉพาะ input ราคา */}
             <input
               type="number"
               className="border p-2 w-full"
               placeholder="ราคา"
+              min={0}
+              step={1}
               value={menuPrice}
-              onChange={(e) => setMenuPrice(Number(e.target.value))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setMenuPrice(value === "" ? "" : Number(value));
+              }}
             />
 
             <div className="flex justify-between">
@@ -231,4 +240,5 @@ const MenuPage = () => {
 };
 
 export default MenuPage;
+
 
