@@ -144,17 +144,22 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
               const isOpen = inn.arduinoSensor === true;
 
               return (
-                <div
+                <Link
                   key={inn._id}
-                  className={`h-14 border-2 flex items-center justify-center font-semibold
-                    ${
-                      isOpen
-                        ? "bg-green-100 border-green-600"
-                        : "bg-gray-300 border-gray-500"
-                    }`}
+                  to={`/inns/${inn._id}/menu`}
+                  className="block"
                 >
-                  {inn.name ?? "ร้าน"}
-                </div>
+                  <div
+                    className={`h-14 border-2 flex items-center justify-center font-semibold
+                      ${
+                        isOpen
+                          ? "bg-green-100 border-green-600"
+                          : "bg-gray-300 border-gray-500"
+                      }`}
+                  >
+                    {inn.name ?? "ร้าน"}
+                  </div>
+                </Link>
               );
             })}
           </div>

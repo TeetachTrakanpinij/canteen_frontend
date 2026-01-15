@@ -46,7 +46,7 @@ export default function App() {
             <Route path="/" element={<Home lang={lang} />} />
             <Route path="/canteen/:canteenId" element={<CanteenDetail lang={lang} />} />
             <Route path="/tables/:tableId" element={<ReservationPage />} />
-            <Route path="/menu" element={<MenuPage />} />
+            <Route path="/inns/:innId/menu" element={<MenuPage />} />
           </Route>
 
           {/* กลุ่มที่ไม่มี Header */}
