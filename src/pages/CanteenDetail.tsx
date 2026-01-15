@@ -142,7 +142,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
               return (
                 <Link
                   key={inn._id}
-                  to={`/inns/${inn._id}/menu`}
+                  to={`/canteen/${canteen._id}/inns/${inn._id}/menu`}
                   className="block"
                 >
                   <div
