@@ -88,16 +88,6 @@ export default function EditProfile() {
           />
         </div>
 
-        {/* Name */}
-        <div className="flex flex-col">
-          <label className="mb-1 text-sm font-medium">Name</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            className="border px-3 py-2 rounded-lg"
-          />
-        </div>
 
         {/* Nickname */}
         <div className="flex flex-col">

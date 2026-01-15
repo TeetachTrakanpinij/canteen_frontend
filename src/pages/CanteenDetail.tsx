@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ListFilter } from 'lucide-react';
+import { ListFilter } from "lucide-react";
 
 interface Table {
   _id: string;
@@ -14,14 +14,17 @@ interface Zone {
   tables?: Table[];
 }
 
+interface Inn {
+  _id: string;
+  name: string | null;
+  arduinoSensor: boolean;
+}
+
 interface Canteen {
   _id: string;
   name: string;
   zones?: Zone[];
-}
-
-interface Params {
-  canteenId?: string;
+  inns?: Inn[];
 }
 
 interface CanteenDetailProps {
@@ -31,12 +34,11 @@ interface CanteenDetailProps {
 export default function CanteenDetail({ lang }: CanteenDetailProps) {
   const { canteenId } = useParams<{ canteenId?: string }>();
   const [canteen, setCanteen] = useState<Canteen | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [filterStatus, setFilterStatus] = useState<
-    "All" | "Available" | "Reserved" | "Unavailable"
-  >("All");
+  const [loading, setLoading] = useState(true);
 
-  // Translation dictionary
+  const [filterStatus, setFilterStatus] =
+    useState<"All" | "Available" | "Reserved" | "Unavailable">("All");
+
   const t = {
     th: {
       loading: "กำลังโหลด...",
@@ -50,7 +52,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       unavailable: "ไม่ว่าง",
       normal: "ปกติ",
       medium: "ปานกลาง",
-      high: "สูง"
+      high: "สูง",
     },
     en: {
       loading: "Loading...",
@@ -64,8 +66,8 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       unavailable: "Unavailable",
       normal: "Normal",
       medium: "Medium",
-      high: "High"
-    }
+      high: "High",
+    },
   }[lang];
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
         const res = await fetch(
           `https://canteen-backend-igyy.onrender.com/api/canteen/${canteenId}`
         );
-        const data: Canteen = await res.json();
+        const data = await res.json();
         setCanteen(data);
       } catch (err) {
         console.error(err);
@@ -85,56 +87,38 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       }
     };
 
-    // เรียกครั้งแรก
     fetchCanteen();
-
-    // ตั้ง interval ทุก 3 วิ
     const interval = setInterval(fetchCanteen, 3000);
-
-    // ล้าง interval ตอน unmount
     return () => clearInterval(interval);
   }, [canteenId]);
 
   if (loading) return <p className="p-4">{t.loading}</p>;
   if (!canteen) return <p className="p-4 text-red-500">{t.notFound}</p>;
 
-  const allTables = canteen.zones?.flatMap((z) => z.tables || []) || [];
-  const usedTables = allTables.filter(
-    (t) => t.status === "Reserved" || t.status === "Unavailable"
-  );
+  const zoneA = canteen.zones?.find((z) => z.name === "A");
+  const zoneB = canteen.zones?.find((z) => z.name === "B");
 
+  const allTables = canteen.zones?.flatMap((z) => z.tables || []) || [];
+  const usedTables = allTables.filter((t) => t.status !== "Available");
   const densityPercent = allTables.length
     ? (usedTables.length / allTables.length) * 100
     : 0;
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "Available": return t.available;
-      case "Reserved": return t.reserved;
-      case "Unavailable": return t.unavailable;
-      default: return status;
-    }
-  };
-
   return (
-  <div className="p-4 font-thai bg-gray-50 min-h-screen">
-    <div className="mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-lg shadow">
-      {/* Left side group */}
-      <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-        <span className="text-sm text-gray-700">
-          {t.quantity}: {usedTables.length}/{allTables.length}
-        </span>
-
-        <ListFilter className="w-5 h-5 text-gray-500" />
-
-        {/* ขวา (dropdown) */}
-        <div className="ml-auto md:ml-0">
+    <div className="p-4 font-thai bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-lg shadow">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-700">
+            {t.quantity}: {usedTables.length}/{allTables.length}
+          </span>
+          <ListFilter className="w-5 h-5 text-gray-500" />
           <select
             value={filterStatus}
             onChange={(e) =>
-            setFilterStatus(e.target.value as typeof filterStatus)
-          }
-          className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              setFilterStatus(e.target.value as typeof filterStatus)
+            }
+            className="border rounded-lg px-3 py-1 text-sm"
           >
             <option value="All">{t.all}</option>
             <option value="Available">{t.available}</option>
@@ -142,102 +126,141 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
             <option value="Unavailable">{t.unavailable}</option>
           </select>
         </div>
+
+        <DensityStatus densityPercent={densityPercent} lang={lang} />
       </div>
 
-      {/* Right side */}
-      <DensityStatus densityPercent={densityPercent} lang={lang} />
-    </div>
+      {/* ===== SINGLE CANTEEN MAP ===== */}
+      <div className="bg-white border-2 border-gray-300 rounded-xl p-4 overflow-x-auto">
+        {/* 🔧 เพิ่มแค่ wrapper นี้ เพื่อให้มือถือเลื่อนได้ */}
+        <div className="min-w-[900px]">
+          {/* Shops */}
+          <div className="grid grid-cols-6 gap-3 mb-6">
+            {canteen.inns?.map((inn) => {
+              const isOpen = inn.arduinoSensor === true;
 
-    {/* Zones */}
-    {canteen.zones?.map((zone) => (
-      <div key={zone._id} className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b-2 border-gray-300 pb-2">
-          {t.zone} {zone.name}
-        </h2>
-
-        {/* Tables */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {zone.tables
-            ?.filter(
-              (table) =>
-                filterStatus === "All" || table.status === filterStatus
-            )
-            .map((table) =>
-              table.status === "Available" ? (
+              return (
                 <Link
-                  key={table._id}
-                  to={`/tables/${table._id}`}
-                  className="p-4 rounded-lg text-center border font-semibold bg-green-100 border-green-400 hover:bg-green-200 hover:scale-105 transform transition cursor-pointer shadow-sm"
+                  key={inn._id}
+                  to={`/inns/${inn._id}/menu`}
+                  className="block"
                 >
-                  <p className="font-bold text-lg">{table.number}</p>
-                  <p className="text-sm text-green-700">{getStatusText(table.status)}</p>
+                  <div
+                    className={`h-14 border-2 flex items-center justify-center font-semibold
+                    ${
+                      isOpen
+                        ? "bg-green-100 border-green-600"
+                        : "bg-gray-300 border-gray-500"
+                    }`}
+                  >
+                    {inn.name ?? "ร้าน"}
+                  </div>
                 </Link>
-              ) : (
-                <div
-                  key={table._id}
-                  className={`p-4 rounded-lg text-center border font-semibold shadow-sm ${
-                    table.status === "Reserved"
-                      ? "bg-yellow-100 border-yellow-400 text-yellow-700"
-                      : "bg-red-100 border-red-400 text-red-700"
-                  }`}
-                >
-                  <p className="font-bold text-lg">{table.number}</p>
-                  <p className="text-sm">{getStatusText(table.status)}</p>
-                </div>
-              )
-            )}
+              );
+            })}
+          </div>
+
+          {/* MAP BODY */}
+          <div className="grid grid-cols-[6fr_1fr_3fr] gap-4">
+            {/* LEFT : ZONE B */}
+            <div className="grid grid-cols-6 grid-flow-row gap-3">
+              {zoneB?.tables
+                ?.filter(
+                  (t) => filterStatus === "All" || t.status === filterStatus
+                )
+                .map((table) => (
+                  <TableBoxTW
+                    key={table._id}
+                    table={table}
+                    clickable={false}
+                  />
+                ))}
+            </div>
+
+            {/* WALK WAY */}
+            <div className="flex justify-center">
+              <div className="w-6" />
+            </div>
+
+            {/* RIGHT : ZONE A */}
+            <div className="grid grid-cols-3 gap-x-3 gap-y-3 auto-rows-max items-start">
+              {zoneA?.tables
+                ?.filter(
+                  (t) => filterStatus === "All" || t.status === filterStatus
+                )
+                .slice(0, 9)
+                .map((table) => (
+                  <TableBoxTW
+                    key={table._id}
+                    table={table}
+                    clickable={true}
+                  />
+                ))}
+            </div>
+          </div>
         </div>
       </div>
-    ))}
-  </div>
-);
-
+    </div>
+  );
 }
 
-// Density Status Component with Language Support
-function DensityStatus({ 
-  densityPercent, 
-  lang 
-}: { 
+/* ================= COMPONENTS ================= */
+
+function DensityStatus({
+  densityPercent,
+  lang,
+}: {
   densityPercent: number;
   lang: "th" | "en";
 }) {
   const t = {
-    th: {
-      density: "ความหนาแน่น",
-      normal: "ปกติ",
-      medium: "ปานกลาง",
-      high: "สูง"
-    },
-    en: {
-      density: "Density",
-      normal: "Normal",
-      medium: "Medium",
-      high: "High"
-    }
+    th: { density: "ความหนาแน่น", normal: "ปกติ", medium: "ปานกลาง", high: "สูง" },
+    en: { density: "Density", normal: "Normal", medium: "Medium", high: "High" },
   }[lang];
 
-  let densityLabel = "";
-  let borderColor = "";
-  let bgColor = "";
+  let label = t.normal;
+  let color = "border-green-500 bg-green-100";
 
-  if (densityPercent < 35) {
-    densityLabel = t.normal;
-    borderColor = "border-green-500";
-    bgColor = "bg-green-100";
-  } else if (densityPercent < 70) {
-    densityLabel = t.medium;
-    borderColor = "border-yellow-500";
-    bgColor = "bg-yellow-100";
-  } else {
-    densityLabel = t.high;
-    borderColor = "border-red-500";
-    bgColor = "bg-red-100";
-  }
+  if (densityPercent >= 70)
+    (color = "border-red-500 bg-red-100"), (label = t.high);
+  else if (densityPercent >= 35)
+    (color = "border-yellow-500 bg-yellow-100"), (label = t.medium);
 
   return (
-    <span className={`text-sm font-medium px-3 py-1 rounded-lg border ${borderColor} ${bgColor}`}>
-      {t.density}: {densityLabel} ({densityPercent.toFixed(1)}%)
+    <span className={`px-3 py-1 border rounded-lg text-sm ${color}`}>
+      {t.density}: {label} ({densityPercent.toFixed(1)}%)
     </span>
   );
 }
+
+function TableBoxTW({
+  table,
+  clickable = true,
+}: {
+  table: Table;
+  clickable?: boolean;
+}) {
+  const base =
+    "h-20 border-2 rounded-md flex items-center justify-center font-bold text-sm";
+
+  const style =
+    table.status === "Available"
+      ? "bg-green-100 border-green-600 hover:scale-105"
+      : table.status === "Reserved"
+      ? "bg-yellow-100 border-yellow-500"
+      : "bg-red-100 border-red-600";
+
+  if (clickable && table.status === "Available") {
+    return (
+      <Link to={`/tables/${table._id}`} className={`${base} ${style}`}>
+        {table.number}
+      </Link>
+    );
+  }
+
+  return <div className={`${base} ${style}`}>{table.number}</div>;
+}
+
+
+
+

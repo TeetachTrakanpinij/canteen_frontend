@@ -1,4 +1,4 @@
-import { ChevronLeft, BookOpenText, PencilLine, Mail, Lock, UserRound } from "lucide-react";
+import { ChevronLeft, BookOpenText, PencilLine, Lock, UserRound } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
@@ -32,12 +32,9 @@ export default function Profile() {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           {/* User Manual */}
-          <Link
-            to="/guide"
-            className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition"
-          >
+          <button className="p-2 rounded-full border border-gray-300 hover:bg-gray-100">
             <BookOpenText className="w-6 h-6 text-gray-700" />
-          </Link>
+          </button>
 
           {/* Edit Profile */}
         <Link
@@ -62,7 +59,7 @@ export default function Profile() {
             </div>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">{user.name || "No name"}</h2>
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">{user.nickname || "No name"}</h2>
           <hr className="my-4" />
 
           {/* Info */}
@@ -70,10 +67,6 @@ export default function Profile() {
             <div className="flex items-center gap-2">
               <UserRound className="w-5 h-5 text-orange-500" />
               <span>{user.nickname || "No nickname"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-orange-500" />
-              <span>{user.email}</span>
             </div>
             <div className="flex items-center gap-2">
               <Lock className="w-5 h-5 text-orange-500" />
@@ -88,7 +81,7 @@ export default function Profile() {
         <button
           onClick={() => {
             localStorage.removeItem("authToken");
-            window.location.href = "/";
+            window.location.href = "/login";
           }}
           className="border border-gray-400 px-6 py-2 rounded-lg hover:bg-gray-100 w-full sm:w-auto"
         >

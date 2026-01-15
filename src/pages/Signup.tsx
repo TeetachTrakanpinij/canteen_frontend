@@ -1,19 +1,17 @@
 // pages/Regis.tsx
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import VerifyPopup from "../components/VerifyPopup";
-import Logo from "../assets/logo.png";
+import Logo from "../assets/logo.png"
 
 export default function Regis() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [verifyToken, setVerifyToken] = useState<string | null>(null);
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,7 +30,7 @@ export default function Regis() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, confirmPassword }),
+          body: JSON.stringify({ name, username, password, confirmPassword })
         }
       );
 
@@ -41,13 +39,10 @@ export default function Regis() {
 
       if (!res.ok) {
         setError(data.message || "Something went wrong!");
-      } else if (data.token) {
-        // สมัครสำเร็จจริง
-        setSuccess("Account created successfully! Please check your email to verify your account.");
-        setVerifyToken(data.token);
-        setShowPopup(true);
       } else {
-        setError("Account could not be created. Please try again.");
+        setSuccess("Account created successfully!");
+
+  
       }
     } catch (err) {
       console.error(err);
@@ -66,10 +61,10 @@ export default function Regis() {
       </div>
 
       <div className="flex flex-col items-center min-h-screen px-8">
+        {/* Logo อยู่เหนือ card */}
         <img
-          src={Logo}
-          alt="Logo"
-          className="w-32 h-32 mb-6 object-contain mt-7"
+          src={Logo} alt="Logo"
+          className="w-32 h-32  mb-6 object-contain mt-7"
         />
         <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-8 mt-5">
           <h1 className="text-2xl font-bold text-center mb-6">
@@ -86,10 +81,10 @@ export default function Regis() {
               required
             />
             <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#FF8001]"
               required
             />
@@ -122,24 +117,16 @@ export default function Regis() {
             </button>
           </form>
 
-          {/* ✅ ซ่อนข้อความจนกว่าจะสมัครสำเร็จ */}
-          {!success && (
-            <p className="text-sm text-center text-gray-600 mt-4">
-              Already have an account?{" "}
-              <a href="/login" className="text-[#FF8001] hover:underline">
-                Log In Here!
-              </a>
-            </p>
-          )}
+          <p className="text-sm text-center text-gray-600 mt-4">
+            Already have an account?{" "}
+            <a href="/login" className="text-[#FF8001] hover:underline">
+              Log In Here!
+            </a>
+          </p>
         </div>
       </div>
 
-      {/* ✅ แสดง popup ก็ต่อเมื่อมี token จริง */}
-      {showPopup && verifyToken && (
-        <VerifyPopup token={verifyToken} onClose={() => setShowPopup(false)} />
-      )}
+      
     </div>
   );
 }
-
-
