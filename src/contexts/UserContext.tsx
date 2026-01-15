@@ -5,12 +5,17 @@ interface User {
   nickname: string;
   email: string;
   imageProfile?: string;
+  role: "user" | "chef" | "admin";
 }
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User) => void;
   refreshUser: () => void;
+
+  isLoggedIn: boolean;
+  isAdmin: boolean;
+  isChef: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,12 +39,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, []);
 
+  // ===== 🔐 ROLE CHECK =====
+  const isLoggedIn = !!user;
+  const isAdmin = user?.role === "admin";
+  const isChef = user?.role === "chef";
+
   return (
-    <UserContext.Provider value={{ user, setUser, refreshUser }}>
+    <UserContext.Provider
+      value={{
+        user,
+        setUser,
+        refreshUser,
+        isLoggedIn,
+        isAdmin,
+        isChef,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
 };
+
 
 export const useUser = () => {
   const context = useContext(UserContext);
