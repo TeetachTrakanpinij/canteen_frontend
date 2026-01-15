@@ -6,14 +6,14 @@ import { useUser } from "../contexts/UserContext";
 interface Menu {
   _id: string;
   name: string;
-  price: number;
+  price: string;
 }
 
 interface Inn {
   _id: string;
   innNumber: number;
   name: string;
-  type: "food" | "drink";
+  type: string;
   arduinoSensor: boolean;
   menus: Menu[];
 }
@@ -28,13 +28,10 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* ===== MODAL STATES (เพิ่ม / แก้ไข) ===== */
   const [showModal, setShowModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState("");
-
-  // 🔧 แก้ตรงนี้: ให้ราคาพิมพ์เลขได้ลื่น
-  const [menuPrice, setMenuPrice] = useState<number | "">("");
+  const [menuPrice, setMenuPrice] = useState<string>("");
 
   /* ===== FETCH INN ===== */
   const fetchInn = () => {
@@ -77,10 +74,8 @@ const MenuPage = () => {
 
   /* ===== SAVE (ADD / EDIT) ===== */
   const handleSave = () => {
-    // 🔧 แก้ตรงนี้: ป้องกันราคาว่าง
-    if (!menuName || menuPrice === "" || menuPrice <= 0) return;
+    if (!menuName.trim() || !menuPrice.trim()) return;
 
-    // EDIT
     if (editingMenu) {
       fetch(
         `https://canteen-backend-igyy.onrender.com/api/menus/${editingMenu._id}`,
@@ -96,9 +91,7 @@ const MenuPage = () => {
         setShowModal(false);
         fetchInn();
       });
-    }
-    // ADD
-    else {
+    } else {
       fetch(
         `https://canteen-backend-igyy.onrender.com/api/menus/${innId}/menus`,
         {
@@ -131,101 +124,96 @@ const MenuPage = () => {
   };
 
   /* ===== UI STATES ===== */
-  if (loading) return <div className="p-6">กำลังโหลดข้อมูล...</div>;
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
-  if (!inn) return <div className="p-6">ไม่พบข้อมูลร้าน</div>;
+  if (loading) return <div className="p-6 text-center">กำลังโหลดข้อมูล...</div>;
+  if (error) return <div className="p-6 text-center text-red-600">{error}</div>;
+  if (!inn) return <div className="p-6 text-center">ไม่พบข้อมูลร้าน</div>;
 
   /* ================== RENDER ================== */
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      {/* ===== HEADER ===== */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{inn.name}</h1>
-        <p className="text-gray-600">
-          ประเภท: {inn.type === "food" ? "อาหาร" : "เครื่องดื่ม"}
-        </p>
-      </div>
-
-      {/* ===== MENU LIST ===== */}
-      <div className="space-y-3">
-        {inn.menus.length === 0 && (
-          <p className="text-gray-500">ยังไม่มีเมนู</p>
-        )}
-
-        {inn.menus.map((menu) => (
-          <div
-            key={menu._id}
-            className="border rounded-md p-3 flex justify-between items-center"
-          >
-            <div>
-              <p className="font-medium">{menu.name}</p>
-              <p className="text-gray-600 text-sm">{menu.price} บาท</p>
-            </div>
-
-            {canEdit && (
-              <button
-                className="text-sm text-blue-600 hover:underline"
-                onClick={() => openEditModal(menu)}
-              >
-                แก้ไข
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* ===== ADD MENU BUTTON ===== */}
-      {canEdit && (
-        <div className="mt-6">
-          <button
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            onClick={openAddModal}
-          >
-            + เพิ่มเมนู
-          </button>
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6">
+        <div className="mb-6 border-b pb-4">
+          <h1 className="text-3xl font-bold text-gray-800">{inn.name}</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            ประเภท: {inn.type}
+          </p>
         </div>
-      )}
 
-      {/* ===== MODAL ===== */}
+        <div className="space-y-3">
+          {inn.menus.length === 0 && (
+            <p className="text-center text-gray-400 py-6">ยังไม่มีเมนู</p>
+          )}
+
+          {inn.menus.map((menu) => (
+            <div
+              key={menu._id}
+              className="flex justify-between items-center border rounded-lg px-4 py-3 hover:shadow transition"
+            >
+              <div>
+                <p className="font-semibold text-gray-800">{menu.name}</p>
+                <p className="text-sm text-gray-500">{menu.price} บาท</p>
+              </div>
+
+              {canEdit && (
+                <button
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={() => openEditModal(menu)}
+                >
+                  แก้ไข
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {canEdit && (
+          <div className="mt-8 text-right">
+            <button
+              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              onClick={openAddModal}
+            >
+              + เพิ่มเมนู
+            </button>
+          </div>
+        )}
+      </div>
+
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded p-6 w-80 space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-80 space-y-4">
             <h2 className="text-xl font-bold">
               {editingMenu ? "แก้ไขเมนู" : "เพิ่มเมนู"}
             </h2>
 
             <input
-              className="border p-2 w-full"
+              className="border rounded-md p-2 w-full"
               placeholder="ชื่อเมนู"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
             />
 
-            {/* 🔧 แก้เฉพาะ input ราคา */}
             <input
-              type="number"
-              className="border p-2 w-full"
-              placeholder="ราคา"
-              min={0}
-              step={1}
+              type="text"
+              className="border rounded-md p-2 w-full"
+              placeholder="ราคา เช่น 20-30 / พิเศษ 50"
               value={menuPrice}
-              onChange={(e) => {
-                const value = e.target.value;
-                setMenuPrice(value === "" ? "" : Number(value));
-              }}
+              onChange={(e) => setMenuPrice(e.target.value)}
             />
 
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               {editingMenu && (
-                <button className="text-red-600" onClick={handleDelete}>
+                <button
+                  className="text-sm text-red-600"
+                  onClick={handleDelete}
+                >
                   ลบเมนู
                 </button>
               )}
 
-              <div className="ml-auto space-x-2">
+              <div className="ml-auto flex gap-2">
                 <button onClick={() => setShowModal(false)}>ยกเลิก</button>
                 <button
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  className="bg-blue-600 text-white px-4 py-1 rounded"
                   onClick={handleSave}
                 >
                   บันทึก
@@ -240,5 +228,7 @@ const MenuPage = () => {
 };
 
 export default MenuPage;
+
+
 
 
