@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import Logo from "../assets/logo.png"
+import BG from "../assets/BG.png"
 
 export default function Regis() {
   const [name, setName] = useState("");
@@ -53,7 +54,10 @@ export default function Regis() {
   };
 
   return (
-    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] min-h-screen">
+    <div className="font-thai h-screen bg-no-repeat bg-center bg-cover"
+      style={{
+        backgroundImage: `url(${BG})`,
+      }}>
       <div className="fixed">
         <button onClick={() => (window.location.href = "/")}>
           <ChevronLeft className="w-10 h-10 ml-10 mt-10 text-icon" />

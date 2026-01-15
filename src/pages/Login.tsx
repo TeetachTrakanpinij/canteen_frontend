@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import Logo from "../assets/logo.png";
 import { useUser } from "../contexts/UserContext"; // ใช้ context
+import BG from "../assets/BG.png"
 
 export default function Login() {
   const navigate = useNavigate();
@@ -55,7 +56,10 @@ export default function Login() {
   };
 
   return (
-    <div className="font-thai bg-gradient-to-r from-[#FF8001] to-[#FBC02D] h-screen">
+    <div className="font-thai h-screen bg-no-repeat bg-center bg-cover"
+      style={{
+        backgroundImage: `url(${BG})`,
+      }}>
       <div className="fixed">
         <button onClick={() => navigate("/")} className="">
           <ChevronLeft className="w-10 h-10 ml-10 mt-10 text-icon" />

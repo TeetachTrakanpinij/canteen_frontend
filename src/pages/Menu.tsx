@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
 
 /* ================== TYPES ================== */
@@ -20,7 +20,8 @@ interface Inn {
 
 /* ================== PAGE ================== */
 const MenuPage = () => {
-  const { innId } = useParams();
+  const { innId, canteenId } = useParams(); // ⚠️ ใช้ canteenId ด้วย
+  const navigate = useNavigate();
   const { isAdmin, isChef } = useUser();
   const canEdit = isAdmin || isChef;
 
@@ -31,7 +32,7 @@ const MenuPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState("");
-  const [menuPrice, setMenuPrice] = useState<string>("");
+  const [menuPrice, setMenuPrice] = useState("");
 
   /* ===== FETCH INN ===== */
   const fetchInn = () => {
@@ -57,6 +58,31 @@ const MenuPage = () => {
     fetchInn();
   }, [innId]);
 
+  /* ================== DELETE INN (FIXED) ================== */
+  const handleDeleteInn = () => {
+    if (!canteenId || !innId) return; // ✅ ป้องกัน undefined
+
+    const confirmed = confirm(
+      "ต้องการลบร้านนี้หรือไม่?\nข้อมูลร้าน เมนู และประเภทจะถูกลบทั้งหมด"
+    );
+    if (!confirmed) return;
+
+    fetch(
+      `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}/clear`,
+      {
+        method: "PATCH",
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        alert("ลบร้านเรียบร้อยแล้ว");
+        navigate(-1);
+      })
+      .catch(() => {
+        alert("ไม่สามารถลบร้านได้");
+      });
+  };
+
   /* ===== MODAL CONTROLS ===== */
   const openAddModal = () => {
     setEditingMenu(null);
@@ -76,16 +102,15 @@ const MenuPage = () => {
   const handleSave = () => {
     if (!menuName.trim() || !menuPrice.trim()) return;
 
+    const payload = { name: menuName, price: menuPrice };
+
     if (editingMenu) {
       fetch(
         `https://canteen-backend-igyy.onrender.com/api/menus/${editingMenu._id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: menuName,
-            price: menuPrice,
-          }),
+          body: JSON.stringify(payload),
         }
       ).then(() => {
         setShowModal(false);
@@ -97,10 +122,7 @@ const MenuPage = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: menuName,
-            price: menuPrice,
-          }),
+          body: JSON.stringify(payload),
         }
       ).then(() => {
         setShowModal(false);
@@ -109,7 +131,7 @@ const MenuPage = () => {
     }
   };
 
-  /* ===== DELETE ===== */
+  /* ===== DELETE MENU ===== */
   const handleDelete = () => {
     if (!editingMenu) return;
     if (!confirm("ต้องการลบเมนูนี้หรือไม่")) return;
@@ -132,11 +154,20 @@ const MenuPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6">
-        <div className="mb-6 border-b pb-4">
-          <h1 className="text-3xl font-bold text-gray-800">{inn.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            ประเภท: {inn.type}
-          </p>
+        <div className="mb-6 border-b pb-4 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">{inn.name}</h1>
+            <p className="text-sm text-gray-500 mt-1">ประเภท: {inn.type}</p>
+          </div>
+
+          {isAdmin && (
+            <button
+              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700"
+              onClick={handleDeleteInn}
+            >
+              ลบร้าน
+            </button>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -147,16 +178,16 @@ const MenuPage = () => {
           {inn.menus.map((menu) => (
             <div
               key={menu._id}
-              className="flex justify-between items-center border rounded-lg px-4 py-3 hover:shadow transition"
+              className="flex justify-between items-center border rounded-lg px-4 py-3"
             >
               <div>
-                <p className="font-semibold text-gray-800">{menu.name}</p>
+                <p className="font-semibold">{menu.name}</p>
                 <p className="text-sm text-gray-500">{menu.price} บาท</p>
               </div>
 
               {canEdit && (
                 <button
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-sm text-blue-600"
                   onClick={() => openEditModal(menu)}
                 >
                   แก้ไข
@@ -169,7 +200,7 @@ const MenuPage = () => {
         {canEdit && (
           <div className="mt-8 text-right">
             <button
-              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-5 py-2 bg-green-600 text-white rounded-lg"
               onClick={openAddModal}
             >
               + เพิ่มเมนู
@@ -178,42 +209,39 @@ const MenuPage = () => {
         )}
       </div>
 
+      {/* ===== MODAL (เดิมทั้งหมด) ===== */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-80 space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 w-80 space-y-4">
             <h2 className="text-xl font-bold">
               {editingMenu ? "แก้ไขเมนู" : "เพิ่มเมนู"}
             </h2>
 
             <input
-              className="border rounded-md p-2 w-full"
-              placeholder="ชื่อเมนู"
+              className="border p-2 w-full"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
+              placeholder="ชื่อเมนู"
             />
 
             <input
-              type="text"
-              className="border rounded-md p-2 w-full"
-              placeholder="ราคา เช่น 20-30 / พิเศษ 50"
+              className="border p-2 w-full"
               value={menuPrice}
               onChange={(e) => setMenuPrice(e.target.value)}
+              placeholder="ราคา เช่น 20-30"
             />
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               {editingMenu && (
-                <button
-                  className="text-sm text-red-600"
-                  onClick={handleDelete}
-                >
+                <button className="text-red-600" onClick={handleDelete}>
                   ลบเมนู
                 </button>
               )}
 
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto space-x-2">
                 <button onClick={() => setShowModal(false)}>ยกเลิก</button>
                 <button
-                  className="bg-blue-600 text-white px-4 py-1 rounded"
+                  className="bg-blue-600 text-white px-3 py-1 rounded"
                   onClick={handleSave}
                 >
                   บันทึก
@@ -228,6 +256,8 @@ const MenuPage = () => {
 };
 
 export default MenuPage;
+
+
 
 
 
