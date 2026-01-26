@@ -18,6 +18,7 @@ interface Inn {
   _id: string;
   name: string | null;
   arduinoSensor: boolean;
+  type?: string; // ✅ เพิ่มเพื่อเช็ค storage
 }
 
 interface Canteen {
@@ -132,29 +133,41 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
 
       {/* ===== SINGLE CANTEEN MAP ===== */}
       <div className="bg-white border-2 border-gray-300 rounded-xl p-4 overflow-x-auto">
-        {/* 🔧 เพิ่มแค่ wrapper นี้ เพื่อให้มือถือเลื่อนได้ */}
         <div className="min-w-[900px]">
           {/* Shops */}
           <div className="grid grid-cols-6 gap-3 mb-6">
             {canteen.inns?.map((inn) => {
+              const isStorage =
+                inn.type?.toLowerCase() === "storage" ||
+                inn.name === "เก็บจาน";
+
               const isOpen = inn.arduinoSensor === true;
+
+              const shopBox = (
+                <div
+                  className={`h-14 border-2 flex items-center justify-center font-semibold
+                    ${
+                      isStorage
+                        ? "bg-gray-200 border-gray-400 text-gray-500 cursor-not-allowed"
+                        : isOpen
+                        ? "bg-green-100 border-green-600 hover:scale-105"
+                        : "bg-gray-300 border-gray-500 text-slate-500 hover:scale-105"
+                    }`}
+                >
+                  {inn.name}
+                </div>
+              );
+
+              if (isStorage) {
+                return <div key={inn._id}>{shopBox}</div>;
+              }
 
               return (
                 <Link
                   key={inn._id}
                   to={`/canteen/${canteen._id}/inns/${inn._id}/menu`}
-                  className="block"
                 >
-                  <div
-                    className={`h-14 border-2 flex items-center justify-center font-semibold
-                    ${
-                      isOpen
-                        ? "bg-green-100 border-green-600"
-                        : "bg-gray-300 border-gray-500"
-                    }`}
-                  >
-                    {inn.name ?? "ร้าน"}
-                  </div>
+                  {shopBox}
                 </Link>
               );
             })}
@@ -172,18 +185,17 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
                   <TableBoxTW
                     key={table._id}
                     table={table}
-                    clickable={false}
+                    clickable={false} // ✅ ไม่ hover
                   />
                 ))}
             </div>
 
-            {/* WALK WAY */}
             <div className="flex justify-center">
               <div className="w-6" />
             </div>
 
             {/* RIGHT : ZONE A */}
-            <div className="grid grid-cols-3 gap-x-3 gap-y-3 auto-rows-max items-start">
+            <div className="grid grid-cols-3 gap-x-3 gap-y-1">
               {zoneA?.tables
                 ?.filter(
                   (t) => filterStatus === "All" || t.status === filterStatus
@@ -241,11 +253,13 @@ function TableBoxTW({
   clickable?: boolean;
 }) {
   const base =
-    "h-20 border-2 rounded-md flex items-center justify-center font-bold text-sm";
+    "h-20 border-2 rounded-md flex items-center justify-center font-bold text-sm transition-transform";
 
   const style =
     table.status === "Available"
-      ? "bg-green-100 border-green-600 hover:scale-105"
+      ? clickable
+        ? "bg-green-100 border-green-600 hover:scale-105"
+        : "bg-green-100 border-green-600"
       : table.status === "Reserved"
       ? "bg-yellow-100 border-yellow-500"
       : "bg-red-100 border-red-600";
@@ -260,6 +274,10 @@ function TableBoxTW({
 
   return <div className={`${base} ${style}`}>{table.number}</div>;
 }
+
+
+
+
 
 
 
