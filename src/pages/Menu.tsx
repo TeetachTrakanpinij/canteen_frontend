@@ -20,7 +20,7 @@ interface Inn {
 
 /* ================== PAGE ================== */
 const MenuPage = () => {
-  const { innId, canteenId } = useParams(); // ⚠️ ใช้ canteenId ด้วย
+  const { innId, canteenId } = useParams();
   const navigate = useNavigate();
   const { isAdmin, isChef } = useUser();
   const canEdit = isAdmin || isChef;
@@ -33,6 +33,11 @@ const MenuPage = () => {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState("");
   const [menuPrice, setMenuPrice] = useState("");
+
+  // ✅ ADD : state สำหรับแก้ไขร้าน
+  const [showEditInnModal, setShowEditInnModal] = useState(false);
+  const [innName, setInnName] = useState("");
+  const [innType, setInnType] = useState("");
 
   /* ===== FETCH INN ===== */
   const fetchInn = () => {
@@ -58,9 +63,9 @@ const MenuPage = () => {
     fetchInn();
   }, [innId]);
 
-  /* ================== DELETE INN (FIXED) ================== */
+  /* ================== DELETE INN ================== */
   const handleDeleteInn = () => {
-    if (!canteenId || !innId) return; // ✅ ป้องกัน undefined
+    if (!canteenId || !innId) return;
 
     const confirmed = confirm(
       "ต้องการลบร้านนี้หรือไม่?\nข้อมูลร้าน เมนู และประเภทจะถูกลบทั้งหมด"
@@ -69,9 +74,7 @@ const MenuPage = () => {
 
     fetch(
       `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}/clear`,
-      {
-        method: "PATCH",
-      }
+      { method: "PATCH" }
     )
       .then((res) => {
         if (!res.ok) throw new Error();
@@ -98,7 +101,15 @@ const MenuPage = () => {
     setShowModal(true);
   };
 
-  /* ===== SAVE (ADD / EDIT) ===== */
+  // ✅ ADD : เปิด modal แก้ไขร้าน
+  const openEditInnModal = () => {
+    if (!inn) return;
+    setInnName(inn.name);
+    setInnType(inn.type);
+    setShowEditInnModal(true);
+  };
+
+  /* ===== SAVE MENU ===== */
   const handleSave = () => {
     if (!menuName.trim() || !menuPrice.trim()) return;
 
@@ -145,50 +156,108 @@ const MenuPage = () => {
     });
   };
 
+  // ✅ ADD : บันทึกการแก้ไขร้าน
+  const handleSaveInn = () => {
+    if (!innName.trim() || !innType.trim()) return;
+
+    fetch(`https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: innName, type: innType }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        setShowEditInnModal(false);
+        fetchInn();
+      })
+      .catch(() => alert("แก้ไขร้านไม่สำเร็จ"));
+  };
+
   /* ===== UI STATES ===== */
-  if (loading) return <div className="p-6 text-center">กำลังโหลดข้อมูล...</div>;
-  if (error) return <div className="p-6 text-center text-red-600">{error}</div>;
-  if (!inn) return <div className="p-6 text-center">ไม่พบข้อมูลร้าน</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        กำลังโหลดข้อมูล...
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        {error}
+      </div>
+    );
+
+  if (!inn)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        ไม่พบข้อมูลร้าน
+      </div>
+    );
 
   /* ================== RENDER ================== */
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6">
-        <div className="mb-6 border-b pb-4 flex justify-between items-start">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-10 px-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+        {/* HEADER */}
+        <div className="flex justify-between items-start border-b pb-5 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">{inn.name}</h1>
-            <p className="text-sm text-gray-500 mt-1">ประเภท: {inn.type}</p>
+            <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+              {inn.name}
+            </h1>
+            <span className="inline-block mt-2 px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">
+              ประเภท: {inn.type}
+            </span>
+
+            {/* ✅ ADD : ปุ่มแก้ไขร้าน */}
+            {canEdit && (
+              <div className="mt-2">
+                <button
+                  onClick={openEditInnModal}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  แก้ไขข้อมูลร้าน
+                </button>
+              </div>
+            )}
           </div>
 
           {isAdmin && (
             <button
-              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700"
               onClick={handleDeleteInn}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition"
             >
               ลบร้าน
             </button>
           )}
         </div>
 
-        <div className="space-y-3">
+        {/* MENU LIST */}
+        <div className="space-y-4">
           {inn.menus.length === 0 && (
-            <p className="text-center text-gray-400 py-6">ยังไม่มีเมนู</p>
+            <div className="text-center text-gray-400 py-10">
+              ยังไม่มีเมนูในร้านนี้
+            </div>
           )}
 
           {inn.menus.map((menu) => (
             <div
               key={menu._id}
-              className="flex justify-between items-center border rounded-lg px-4 py-3"
+              className="flex justify-between items-center bg-gray-50 border rounded-xl px-5 py-4 hover:shadow-md transition"
             >
               <div>
-                <p className="font-semibold">{menu.name}</p>
-                <p className="text-sm text-gray-500">{menu.price} บาท</p>
+                <p className="font-semibold text-lg text-gray-800">
+                  {menu.name}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  ราคา {menu.price} บาท
+                </p>
               </div>
 
               {canEdit && (
                 <button
-                  className="text-sm text-blue-600"
                   onClick={() => openEditModal(menu)}
+                  className="text-sm font-medium text-blue-600 hover:underline"
                 >
                   แก้ไข
                 </button>
@@ -197,11 +266,12 @@ const MenuPage = () => {
           ))}
         </div>
 
+        {/* ADD BUTTON */}
         {canEdit && (
-          <div className="mt-8 text-right">
+          <div className="mt-10 flex justify-end">
             <button
-              className="px-5 py-2 bg-green-600 text-white rounded-lg"
               onClick={openAddModal}
+              className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition shadow"
             >
               + เพิ่มเมนู
             </button>
@@ -209,40 +279,92 @@ const MenuPage = () => {
         )}
       </div>
 
-      {/* ===== MODAL (เดิมทั้งหมด) ===== */}
+      {/* ===== MODAL : EDIT INN ===== */}
+      {showEditInnModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-96 p-6 space-y-4 shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800">
+              แก้ไขข้อมูลร้าน
+            </h2>
+
+            <input
+              className="w-full border rounded-lg px-3 py-2"
+              value={innName}
+              onChange={(e) => setInnName(e.target.value)}
+              placeholder="ชื่อร้าน"
+            />
+
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={innType}
+              onChange={(e) => setInnType(e.target.value)}
+            >
+              <option value="">เลือกประเภทร้าน</option>
+              <option value="food">ร้านอาหาร</option>
+              <option value="drink">ร้านเครื่องดื่ม</option>
+              <option value="storage">เก็บจาน</option>
+            </select>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowEditInnModal(false)}
+                className="px-4 py-2 text-gray-500"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveInn}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+              >
+                บันทึก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL MENU (ของเดิม ไม่แตะ) ===== */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-6 w-80 space-y-4">
-            <h2 className="text-xl font-bold">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-96 p-6 space-y-4 shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800">
               {editingMenu ? "แก้ไขเมนู" : "เพิ่มเมนู"}
             </h2>
 
             <input
-              className="border p-2 w-full"
+              className="w-full border rounded-lg px-3 py-2"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
               placeholder="ชื่อเมนู"
             />
 
             <input
-              className="border p-2 w-full"
+              className="w-full border rounded-lg px-3 py-2"
               value={menuPrice}
               onChange={(e) => setMenuPrice(e.target.value)}
               placeholder="ราคา เช่น 20-30"
             />
 
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between pt-2">
               {editingMenu && (
-                <button className="text-red-600" onClick={handleDelete}>
+                <button
+                  className="text-sm text-red-600 hover:underline"
+                  onClick={handleDelete}
+                >
                   ลบเมนู
                 </button>
               )}
 
-              <div className="ml-auto space-x-2">
-                <button onClick={() => setShowModal(false)}>ยกเลิก</button>
+              <div className="ml-auto flex gap-3">
                 <button
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-gray-600"
+                >
+                  ยกเลิก
+                </button>
+                <button
                   onClick={handleSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
                 >
                   บันทึก
                 </button>
@@ -256,6 +378,8 @@ const MenuPage = () => {
 };
 
 export default MenuPage;
+
+
 
 
 

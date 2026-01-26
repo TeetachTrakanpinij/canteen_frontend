@@ -94,13 +94,6 @@ export default function Login() {
             className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-[#FF8001]"
           />
 
-          <p
-            onClick={() => navigate("/forgot-password")}
-            className="text-right text-sm text-[#FF8001] hover:underline cursor-pointer mb-4"
-          >
-            Forgot Password ?
-          </p>
-
           <button
             onClick={handleLogin}
             disabled={loading}
