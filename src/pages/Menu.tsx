@@ -197,7 +197,7 @@ const MenuPage = () => {
 
   /* ================== RENDER ================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-600 via-amber-500 to-yellow-400 py-10 px-4">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
         {/* HEADER */}
         <div className="flex justify-between items-start border-b pb-5 mb-6">
