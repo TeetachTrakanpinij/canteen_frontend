@@ -7,6 +7,7 @@ interface Menu {
   _id: string;
   name: string;
   price: string;
+  image?: string;
 }
 
 interface Inn {
@@ -15,6 +16,7 @@ interface Inn {
   name: string;
   type: string;
   arduinoSensor: boolean;
+  queueCount: number;
   menus: Menu[];
 }
 
@@ -29,33 +31,66 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /* ===== MENU MODAL ===== */
   const [showModal, setShowModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState("");
   const [menuPrice, setMenuPrice] = useState("");
+  const [menuImage, setMenuImage] = useState<File | null>(null); // ✅ รองรับอัปโหลดไฟล์
 
-  // ✅ ADD : state สำหรับแก้ไขร้าน
+  /* ===== INN MODAL ===== */
   const [showEditInnModal, setShowEditInnModal] = useState(false);
   const [innName, setInnName] = useState("");
   const [innType, setInnType] = useState("");
 
-  /* ===== FETCH INN ===== */
+  /* ================== QUEUE ================== */
+  const increaseQueue = () => {
+    if (!canEdit || !canteenId || !innId || !inn) return;
+
+    fetch(
+      `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}/queue/increase`,
+      { method: "PATCH" }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setInn({ ...inn, queueCount: data.queueCount });
+      })
+      .catch(() => alert("เพิ่มคิวไม่สำเร็จ"));
+  };
+
+  const decreaseQueue = () => {
+    if (!canEdit || !canteenId || !innId || !inn) return;
+
+    fetch(
+      `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}/queue/decrease`,
+      { method: "PATCH" }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setInn({ ...inn, queueCount: data.queueCount });
+      })
+      .catch(() => alert("ลดคิวไม่สำเร็จ"));
+  };
+
+  /* ================== FETCH INN ================== */
   const fetchInn = () => {
     if (!innId) return;
 
     setLoading(true);
+
     fetch(`https://canteen-backend-igyy.onrender.com/api/inns/${innId}`)
       .then((res) => {
-        if (!res.ok) throw new Error("ไม่พบข้อมูลร้าน");
+        if (!res.ok) throw new Error("fetch inn failed");
         return res.json();
       })
       .then((data) => {
-        setInn(data);
+        setInn({
+          ...data,
+          queueCount: data.queueCount ?? data.queue ?? 0,
+        });
         setError("");
       })
-      .catch(() => {
-        setError("โหลดข้อมูลร้านไม่สำเร็จ");
-      })
+      .catch(() => setError("โหลดข้อมูลร้านไม่สำเร็จ"))
       .finally(() => setLoading(false));
   };
 
@@ -65,32 +100,26 @@ const MenuPage = () => {
 
   /* ================== DELETE INN ================== */
   const handleDeleteInn = () => {
-    if (!canteenId || !innId) return;
-
-    const confirmed = confirm(
-      "ต้องการลบร้านนี้หรือไม่?\nข้อมูลร้าน เมนู และประเภทจะถูกลบทั้งหมด"
-    );
-    if (!confirmed) return;
+    if (!isAdmin || !canteenId || !innId) return;
+    if (!confirm("ต้องการลบร้านนี้หรือไม่?")) return;
 
     fetch(
       `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}/clear`,
       { method: "PATCH" }
     )
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        alert("ลบร้านเรียบร้อยแล้ว");
+      .then(() => {
+        alert("ลบร้านเรียบร้อย");
         navigate(-1);
       })
-      .catch(() => {
-        alert("ไม่สามารถลบร้านได้");
-      });
+      .catch(() => alert("ไม่สามารถลบร้านได้"));
   };
 
-  /* ===== MODAL CONTROLS ===== */
+  /* ================== MENU HANDLERS ================== */
   const openAddModal = () => {
     setEditingMenu(null);
     setMenuName("");
     setMenuPrice("");
+    setMenuImage(null);
     setShowModal(true);
   };
 
@@ -98,30 +127,24 @@ const MenuPage = () => {
     setEditingMenu(menu);
     setMenuName(menu.name);
     setMenuPrice(menu.price);
+    setMenuImage(null);
     setShowModal(true);
   };
 
-  // ✅ ADD : เปิด modal แก้ไขร้าน
-  const openEditInnModal = () => {
-    if (!inn) return;
-    setInnName(inn.name);
-    setInnType(inn.type);
-    setShowEditInnModal(true);
-  };
+  const handleSaveMenu = () => {
+    if (!canEdit || !menuName || !menuPrice) return;
 
-  /* ===== SAVE MENU ===== */
-  const handleSave = () => {
-    if (!menuName.trim() || !menuPrice.trim()) return;
-
-    const payload = { name: menuName, price: menuPrice };
+    const formData = new FormData();
+    formData.append("name", menuName);
+    formData.append("price", menuPrice);
+    if (menuImage) formData.append("image", menuImage);
 
     if (editingMenu) {
       fetch(
         `https://canteen-backend-igyy.onrender.com/api/menus/${editingMenu._id}`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: formData,
         }
       ).then(() => {
         setShowModal(false);
@@ -132,8 +155,7 @@ const MenuPage = () => {
         `https://canteen-backend-igyy.onrender.com/api/menus/${innId}/menus`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: formData,
         }
       ).then(() => {
         setShowModal(false);
@@ -142,9 +164,8 @@ const MenuPage = () => {
     }
   };
 
-  /* ===== DELETE MENU ===== */
-  const handleDelete = () => {
-    if (!editingMenu) return;
+  const handleDeleteMenu = () => {
+    if (!canEdit || !editingMenu) return;
     if (!confirm("ต้องการลบเมนูนี้หรือไม่")) return;
 
     fetch(
@@ -156,219 +177,230 @@ const MenuPage = () => {
     });
   };
 
-  // ✅ ADD : บันทึกการแก้ไขร้าน
-  const handleSaveInn = () => {
-    if (!innName.trim() || !innType.trim()) return;
+  /* ================== INN EDIT ================== */
+  const openEditInnModal = () => {
+    if (!inn || !canEdit) return;
+    setInnName(inn.name);
+    setInnType(inn.type);
+    setShowEditInnModal(true);
+  };
 
-    fetch(`https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: innName, type: innType }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error();
+  const handleSaveInn = () => {
+    if (!canEdit) return;
+
+    fetch(
+      `https://canteen-backend-igyy.onrender.com/api/inns/${canteenId}/inns/${innId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: innName, type: innType }),
+      }
+    )
+      .then(() => {
         setShowEditInnModal(false);
         fetchInn();
       })
       .catch(() => alert("แก้ไขร้านไม่สำเร็จ"));
   };
 
-  /* ===== UI STATES ===== */
+  /* ================== UI STATES ================== */
   if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        กำลังโหลดข้อมูล...
-      </div>
-    );
-
+    return <div className="h-screen flex items-center justify-center">กำลังโหลด...</div>;
   if (error)
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-600">
+      <div className="h-screen flex items-center justify-center text-red-600">
         {error}
       </div>
     );
-
-  if (!inn)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        ไม่พบข้อมูลร้าน
-      </div>
-    );
+  if (!inn) return null;
 
   /* ================== RENDER ================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-600 via-amber-500 to-yellow-400 py-10 px-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-        {/* HEADER */}
-        <div className="flex justify-between items-start border-b pb-5 mb-6">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-              {inn.name}
-            </h1>
-            <span className="inline-block mt-2 px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">
-              ประเภท: {inn.type}
+    <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 p-6">
+      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl p-6">
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* ================= LEFT ================= */}
+          <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+            <h1 className="text-2xl font-bold">{inn.name}</h1>
+
+            <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+              {inn.type}
             </span>
 
-            {/* ✅ ADD : ปุ่มแก้ไขร้าน */}
             {canEdit && (
-              <div className="mt-2">
+              <button
+                onClick={openEditInnModal}
+                className="text-blue-600 text-sm hover:underline block"
+              >
+                แก้ไขข้อมูลร้าน
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={handleDeleteInn}
+                className="w-full bg-red-600 text-white py-2 rounded-lg"
+              >
+                ลบร้าน
+              </button>
+            )}
+
+            {/* QUEUE */}
+            <div className="border rounded-xl p-4 text-center space-y-3">
+              <p className="text-gray-500">จำนวนคิว</p>
+              <p className="text-4xl font-bold">{inn.queueCount}</p>
+
+              {canEdit && (
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={decreaseQueue}
+                    className="px-4 py-2 bg-gray-200 rounded-lg"
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={increaseQueue}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ================= RIGHT ================= */}
+          <div className="md:col-span-2 bg-gray-50 rounded-xl p-6">
+            <h2 className="text-xl font-bold mb-4">MENU</h2>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {inn.menus.map((menu) => (
+                <div key={menu._id} className="bg-white rounded-xl shadow overflow-hidden">
+                  <div className="h-32 bg-gray-200 flex items-center justify-center">
+                    {menu.image ? (
+                      <img src={menu.image} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400">ไม่มีรูป</span>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex justify-between">
+                    <div>
+                      <p className="font-semibold">{menu.name}</p>
+                      <p className="text-sm text-gray-500">{menu.price} บาท</p>
+                    </div>
+
+                    {canEdit && (
+                      <button
+                        onClick={() => openEditModal(menu)}
+                        className="text-blue-600 text-sm"
+                      >
+                        แก้ไข
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {canEdit && (
+              <div className="flex justify-end mt-6">
                 <button
-                  onClick={openEditInnModal}
-                  className="text-sm text-blue-600 hover:underline"
+                  onClick={openAddModal}
+                  className="bg-green-600 text-white px-6 py-3 rounded-xl"
                 >
-                  แก้ไขข้อมูลร้าน
+                  + เพิ่มเมนู
                 </button>
               </div>
             )}
           </div>
-
-          {isAdmin && (
-            <button
-              onClick={handleDeleteInn}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition"
-            >
-              ลบร้าน
-            </button>
-          )}
         </div>
-
-        {/* MENU LIST */}
-        <div className="space-y-4">
-          {inn.menus.length === 0 && (
-            <div className="text-center text-gray-400 py-10">
-              ยังไม่มีเมนูในร้านนี้
-            </div>
-          )}
-
-          {inn.menus.map((menu) => (
-            <div
-              key={menu._id}
-              className="flex justify-between items-center bg-gray-50 border rounded-xl px-5 py-4 hover:shadow-md transition"
-            >
-              <div>
-                <p className="font-semibold text-lg text-gray-800">
-                  {menu.name}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  ราคา {menu.price} บาท
-                </p>
-              </div>
-
-              {canEdit && (
-                <button
-                  onClick={() => openEditModal(menu)}
-                  className="text-sm font-medium text-blue-600 hover:underline"
-                >
-                  แก้ไข
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* ADD BUTTON */}
-        {canEdit && (
-          <div className="mt-10 flex justify-end">
-            <button
-              onClick={openAddModal}
-              className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition shadow"
-            >
-              + เพิ่มเมนู
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* ===== MODAL : EDIT INN ===== */}
-      {showEditInnModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-96 p-6 space-y-4 shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800">
-              แก้ไขข้อมูลร้าน
-            </h2>
-
-            <input
-              className="w-full border rounded-lg px-3 py-2"
-              value={innName}
-              onChange={(e) => setInnName(e.target.value)}
-              placeholder="ชื่อร้าน"
-            />
-
-            <select
-              className="w-full border rounded-lg px-3 py-2"
-              value={innType}
-              onChange={(e) => setInnType(e.target.value)}
-            >
-              <option value="">เลือกประเภทร้าน</option>
-              <option value="food">ร้านอาหาร</option>
-              <option value="drink">ร้านเครื่องดื่ม</option>
-              <option value="storage">เก็บจาน</option>
-            </select>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setShowEditInnModal(false)}
-                className="px-4 py-2 text-gray-500"
-              >
-                ยกเลิก
-              </button>
-              <button
-                onClick={handleSaveInn}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-              >
-                บันทึก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== MODAL MENU (ของเดิม ไม่แตะ) ===== */}
+      {/* ================= MODAL MENU ================= */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-96 p-6 space-y-4 shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-96 p-6 space-y-4">
+            <h2 className="text-xl font-bold">
               {editingMenu ? "แก้ไขเมนู" : "เพิ่มเมนู"}
             </h2>
 
             <input
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border px-3 py-2 rounded"
+              placeholder="ชื่อเมนู"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
-              placeholder="ชื่อเมนู"
             />
 
             <input
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border px-3 py-2 rounded"
+              placeholder="ราคา"
               value={menuPrice}
               onChange={(e) => setMenuPrice(e.target.value)}
-              placeholder="ราคา เช่น 20-30"
             />
 
-            <div className="flex items-center justify-between pt-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setMenuImage(e.target.files ? e.target.files[0] : null)
+              }
+            />
+
+            <div className="flex justify-between items-center">
               {editingMenu && (
                 <button
-                  className="text-sm text-red-600 hover:underline"
-                  onClick={handleDelete}
+                  onClick={handleDeleteMenu}
+                  className="text-red-600 text-sm"
                 >
                   ลบเมนู
                 </button>
               )}
 
               <div className="ml-auto flex gap-3">
+                <button onClick={() => setShowModal(false)}>ยกเลิก</button>
                 <button
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  onClick={handleSaveMenu}
+                  className="bg-blue-600 text-white px-4 py-2 rounded"
                 >
                   บันทึก
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL INN ================= */}
+      {showEditInnModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-96 p-6 space-y-4">
+            <h2 className="text-xl font-bold">แก้ไขข้อมูลร้าน</h2>
+
+            <input
+              className="w-full border px-3 py-2 rounded"
+              value={innName}
+              onChange={(e) => setInnName(e.target.value)}
+            />
+
+            <select
+              className="w-full border px-3 py-2 rounded"
+              value={innType}
+              onChange={(e) => setInnType(e.target.value)}
+            >
+              <option value="food">ร้านอาหาร</option>
+              <option value="drink">ร้านเครื่องดื่ม</option>
+              <option value="storage">เก็บจาน</option>
+            </select>
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowEditInnModal(false)}>ยกเลิก</button>
+              <button
+                onClick={handleSaveInn}
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                บันทึก
+              </button>
             </div>
           </div>
         </div>
@@ -378,6 +410,7 @@ const MenuPage = () => {
 };
 
 export default MenuPage;
+
 
 
 
