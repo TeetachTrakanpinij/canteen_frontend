@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FiClipboard } from "react-icons/fi";
 import { QrReader } from "react-qr-reader";
@@ -22,6 +22,7 @@ interface Reservation {
   userID: string;
   duration_minutes: number;
   reserved_at: string;
+  checked_in?: boolean;
 }
 
 interface HomeProps {
@@ -36,6 +37,9 @@ export default function Home({ lang }: HomeProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
+  const [notification, setNotification] = useState("");
+
+  const scanProcessedRef = useRef(false);
 
   const token = localStorage.getItem("authToken");
   const isLoggedIn = !!token;
@@ -49,30 +53,72 @@ export default function Home({ lang }: HomeProps) {
     }
   }, []);
 
-  // Fetch canteens
+  // ตรวจจับเวลาหมดอายุการจอง
   useEffect(() => {
-    const fetchCanteens = async () => {
-      try {
-        const res = await fetch(
-          "https://canteen-backend-igyy.onrender.com/api/canteen/",
-          {
-            headers: token
-              ? {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                }
-              : undefined,
-          }
-        );
-        const data: Canteen[] = await res.json();
-        setCanteens(data);
-      } catch (err) {
-        console.error("Error fetching canteens:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!reservation) return;
 
+    const reservedAt = new Date(reservation.reserved_at).getTime();
+    const now = Date.now();
+    const durationMs = reservation.duration_minutes * 60 * 1000;
+    const remainingTime = reservedAt + durationMs - now;
+
+    if (remainingTime <= 0) {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการจอง โต๊ะกลับเป็นว่างแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการจอง โต๊ะกลับเป็นว่างแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+    }, remainingTime);
+
+    return () => clearTimeout(timer);
+  }, [reservation]);
+
+  // ปุ่มหายหลังเช็กอินแล้วครบเวลา
+  useEffect(() => {
+    if (!reservation?.checked_in) return;
+
+    const afterCheckInTime = reservation.duration_minutes * 60 * 1000; // ใช้เวลาที่จองจริง
+    const timer = setTimeout(() => {
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
+      setNotification("หมดเวลาการใช้งานโต๊ะแล้ว");
+      setTimeout(() => setNotification(""), 3000);
+    }, afterCheckInTime);
+
+    return () => clearTimeout(timer);
+  }, [reservation?.checked_in]);
+
+  // Fetch canteens
+  const fetchCanteens = async () => {
+    try {
+      const res = await fetch(
+        "https://canteen-backend-igyy.onrender.com/api/canteen/",
+        {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              }
+            : undefined,
+        }
+      );
+      const data: Canteen[] = await res.json();
+      setCanteens(data);
+    } catch (err) {
+      console.error("Error fetching canteens:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCanteens();
     const interval = setInterval(fetchCanteens, 3000);
     return () => clearInterval(interval);
@@ -99,6 +145,7 @@ export default function Home({ lang }: HomeProps) {
     fetchUser();
   }, [isLoggedIn, token]);
 
+  // ยกเลิกการจอง
   const handleCancel = async () => {
     if (!reservation) return;
 
@@ -119,52 +166,61 @@ export default function Home({ lang }: HomeProps) {
       localStorage.removeItem("activeReservation");
       setShowPopup(false);
       setScanning(false);
+      setNotification("ยกเลิกการจองสำเร็จ");
+      setTimeout(() => setNotification(""), 3000);
     } catch (err) {
       console.error(err);
+      setNotification("ยกเลิกไม่สำเร็จ");
+      setTimeout(() => setNotification(""), 3000);
     }
   };
 
+  // สแกน QR
   const handleScanQR = async (scannedText: string) => {
+    const tableId = scannedText.trim();
     try {
-      if (!reservation) throw new Error("ไม่มีการจองให้สแกน");
-
       const res = await fetch(
-        `https://canteen-backend-igyy.onrender.com/api/reservation/${reservation._id}/checkin`,
+        `https://canteen-backend-igyy.onrender.com/api/tables/${tableId}/checkin`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ qrData: scannedText }),
         }
       );
-
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Server error ${res.status}: ${text}`);
       }
+      const data = await res.json();
+      console.log("Scan success:", data);
 
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        console.log("Scan success:", data);
-        alert("สแกนสำเร็จ! โต๊ะถูกเปลี่ยนสถานะเป็น unavailable");
-
-        setScanning(false);
-        setShowPopup(false);
-
-        // ลบ reservation หลัง scan เสร็จ
-        setReservation(null);
-        localStorage.removeItem("activeReservation");
-      } else {
-        const text = await res.text();
-        console.error("Non-JSON response:", text);
-        setScanError("สแกน QR ไม่สำเร็จ: server ส่งข้อมูลไม่ถูกต้อง");
+      // อัปเดตสถานะ checked_in
+      if (reservation) {
+        const updatedReservation: Reservation = {
+          ...reservation,
+          checked_in: true,
+          _id: reservation._id || "",
+          tableID: reservation.tableID || "",
+          userID: reservation.userID || "",
+          duration_minutes: reservation.duration_minutes ?? 10,
+          reserved_at: reservation.reserved_at || new Date().toISOString(),
+        };
+        setReservation(updatedReservation);
+        localStorage.setItem("activeReservation", JSON.stringify(updatedReservation));
       }
+
+      setNotification(`✅ เช็คอินสำเร็จ คุณ${user?.nickname ?? user?.name ?? ""}`);
+      setTimeout(() => setNotification(""), 3000);
+
+      setScanning(false);
+      setShowPopup(false);
+      await fetchCanteens();
     } catch (err: any) {
       console.error(err);
       setScanError(err.message);
+      scanProcessedRef.current = false;
     }
   };
 
@@ -209,13 +265,21 @@ export default function Home({ lang }: HomeProps) {
             ))
           )}
         </div>
+
+        {notification && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
+            {notification}
+          </div>
+        )}
       </main>
 
-      {/* Floating reservation button */}
       {reservation && (
         <>
           <button
-            onClick={() => setShowPopup(true)}
+            onClick={() => {
+              setShowPopup(true);
+              scanProcessedRef.current = false;
+            }}
             className="fixed bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition"
           >
             <FiClipboard size={24} />
@@ -224,9 +288,7 @@ export default function Home({ lang }: HomeProps) {
           {showPopup && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
               <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                <h2 className="text-xl font-bold mb-3 text-gray-800">
-                  การจองของคุณ
-                </h2>
+                <h2 className="text-xl font-bold mb-3 text-gray-800">การจองของคุณ</h2>
                 <p className="mb-3 text-gray-700 text-sm">
                   คุณได้จองโต๊ะเรียบร้อยแล้ว
                   <br />
@@ -239,6 +301,7 @@ export default function Home({ lang }: HomeProps) {
                       onClick={() => {
                         setScanning(true);
                         setScanError("");
+                        scanProcessedRef.current = false;
                       }}
                       className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition text-sm"
                     >
@@ -252,22 +315,20 @@ export default function Home({ lang }: HomeProps) {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-2">
+                  <div className="flex flex-col items-center gap-2 w-full">
                     <QrReader
                       onResult={(result, error) => {
-                        if (result) {
-                          const scannedText = result.getText(); // ใช้ getText() แทน result.text
-                          handleScanQR(scannedText);
+                        if (result && !scanProcessedRef.current) {
+                          scanProcessedRef.current = true;
+                          setScanning(false);
+                          handleScanQR(result.getText());
                         }
                         if (error) console.error(error);
                       }}
                       constraints={{ facingMode: "environment" }}
                       containerStyle={{ width: "100%" }}
                     />
-
-                    {scanError && (
-                      <p className="text-red-500 text-sm">{scanError}</p>
-                    )}
+                    {scanError && <p className="text-red-500 text-sm">{scanError}</p>}
                     <button
                       onClick={() => setScanning(false)}
                       className="mt-2 text-gray-500 underline text-sm"
