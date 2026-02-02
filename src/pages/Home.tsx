@@ -39,12 +39,18 @@ export default function Home({ lang }: HomeProps) {
   const [scanError, setScanError] = useState("");
   const [notification, setNotification] = useState("");
 
+  // ⭐ state สำหรับจัดการโต๊ะ
+  const [showTableControl, setShowTableControl] = useState(false);
+  const [tableScanMode, setTableScanMode] =
+    useState<"checkin" | "activate" | null>(null);
+
+  // ⭐ ตัวล็อก QR ยิงซ้ำ
   const scanProcessedRef = useRef(false);
 
   const token = localStorage.getItem("authToken");
   const isLoggedIn = !!token;
 
-  // โหลด reservation จาก localStorage
+  /* ================= Load reservation ================= */
   useEffect(() => {
     const saved = localStorage.getItem("activeReservation");
     if (saved) {
@@ -53,14 +59,13 @@ export default function Home({ lang }: HomeProps) {
     }
   }, []);
 
-  // ตรวจจับเวลาหมดอายุการจอง
+  /* ================= Expire reservation ================= */
   useEffect(() => {
     if (!reservation) return;
 
     const reservedAt = new Date(reservation.reserved_at).getTime();
-    const now = Date.now();
     const durationMs = reservation.duration_minutes * 60 * 1000;
-    const remainingTime = reservedAt + durationMs - now;
+    const remainingTime = reservedAt + durationMs - Date.now();
 
     if (remainingTime <= 0) {
       localStorage.removeItem("activeReservation");
@@ -80,22 +85,7 @@ export default function Home({ lang }: HomeProps) {
     return () => clearTimeout(timer);
   }, [reservation]);
 
-  // ปุ่มหายหลังเช็กอินแล้วครบเวลา
-  useEffect(() => {
-    if (!reservation?.checked_in) return;
-
-    const afterCheckInTime = reservation.duration_minutes * 60 * 1000; // ใช้เวลาที่จองจริง
-    const timer = setTimeout(() => {
-      localStorage.removeItem("activeReservation");
-      setReservation(null);
-      setNotification("หมดเวลาการใช้งานโต๊ะแล้ว");
-      setTimeout(() => setNotification(""), 3000);
-    }, afterCheckInTime);
-
-    return () => clearTimeout(timer);
-  }, [reservation?.checked_in]);
-
-  // Fetch canteens
+  /* ================= Fetch canteens ================= */
   const fetchCanteens = async () => {
     try {
       const res = await fetch(
@@ -112,7 +102,7 @@ export default function Home({ lang }: HomeProps) {
       const data: Canteen[] = await res.json();
       setCanteens(data);
     } catch (err) {
-      console.error("Error fetching canteens:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -124,33 +114,24 @@ export default function Home({ lang }: HomeProps) {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Fetch user profile
+  /* ================= Fetch user ================= */
   useEffect(() => {
     if (!isLoggedIn || !token) return;
 
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(
-          "https://canteen-backend-igyy.onrender.com/api/user/profile",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!res.ok) throw new Error("Failed to fetch user");
-        const data: UserData = await res.json();
-        setUser(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchUser();
+    fetch("https://canteen-backend-igyy.onrender.com/api/user/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then(setUser)
+      .catch(console.error);
   }, [isLoggedIn, token]);
 
-  // ยกเลิกการจอง
+  /* ================= Cancel reservation ================= */
   const handleCancel = async () => {
     if (!reservation) return;
 
     try {
-      const res = await fetch(
+      await fetch(
         `https://canteen-backend-igyy.onrender.com/api/reservation/${reservation._id}/cancel`,
         {
           method: "PUT",
@@ -160,26 +141,22 @@ export default function Home({ lang }: HomeProps) {
           },
         }
       );
-      if (!res.ok) throw new Error("ยกเลิกไม่สำเร็จ");
 
-      setReservation(null);
       localStorage.removeItem("activeReservation");
+      setReservation(null);
       setShowPopup(false);
       setScanning(false);
       setNotification("ยกเลิกการจองสำเร็จ");
       setTimeout(() => setNotification(""), 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setNotification("ยกเลิกไม่สำเร็จ");
-      setTimeout(() => setNotification(""), 3000);
     }
   };
 
-  // สแกน QR
-  const handleScanQR = async (scannedText: string) => {
-    const tableId = scannedText.trim();
+  /* ================= Scan check-in (มีการจอง) ================= */
+  const handleScanQR = async (tableId: string) => {
     try {
-      const res = await fetch(
+      await fetch(
         `https://canteen-backend-igyy.onrender.com/api/tables/${tableId}/checkin`,
         {
           method: "PUT",
@@ -189,73 +166,73 @@ export default function Home({ lang }: HomeProps) {
           },
         }
       );
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Server error ${res.status}: ${text}`);
-      }
-      const data = await res.json();
-      console.log("Scan success:", data);
 
-      // อัปเดตสถานะ checked_in
-      if (reservation) {
-        const updatedReservation: Reservation = {
-          ...reservation,
-          checked_in: true,
-          _id: reservation._id || "",
-          tableID: reservation.tableID || "",
-          userID: reservation.userID || "",
-          duration_minutes: reservation.duration_minutes ?? 10,
-          reserved_at: reservation.reserved_at || new Date().toISOString(),
-        };
-        setReservation(updatedReservation);
-        localStorage.setItem("activeReservation", JSON.stringify(updatedReservation));
-      }
+      localStorage.removeItem("activeReservation");
+      setReservation(null);
 
-      setNotification(`✅ เช็คอินสำเร็จ คุณ${user?.nickname ?? user?.name ?? ""}`);
+      setNotification("✅ เช็คอินสำเร็จ");
       setTimeout(() => setNotification(""), 3000);
 
-      setScanning(false);
       setShowPopup(false);
-      await fetchCanteens();
+      fetchCanteens();
     } catch (err: any) {
-      console.error(err);
       setScanError(err.message);
       scanProcessedRef.current = false;
     }
   };
 
-  const t = {
-    th: { welcome: "ยินดีต้อนรับ", name: "ผู้ใช้", loading: "กำลังโหลด..." },
-    en: { welcome: "Welcome", name: "User", loading: "Loading..." },
-  }[lang];
+  /* ================= Scan table control (ไม่สนการจอง) ================= */
+  const handleTableControlScan = async (tableId: string) => {
+    const endpoint =
+      tableScanMode === "checkin"
+        ? `/api/reservation/${tableId}/checkin`
+        : `/api/reservation/${tableId}/activate`;
 
+    try {
+      await fetch(
+        `https://canteen-backend-igyy.onrender.com${endpoint}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setNotification(
+        tableScanMode === "checkin"
+          ? "🚫 โต๊ะถูกตั้งเป็นไม่ว่างแล้ว"
+          : "✅ โต๊ะกลับมาเป็นว่างแล้ว"
+      );
+      setTimeout(() => setNotification(""), 3000);
+
+      fetchCanteens();
+    } catch {
+      setNotification("❌ ดำเนินการไม่สำเร็จ");
+    }
+  };
+
+  /* ================= UI ================= */
   return (
     <div className="font-thai bg-white min-h-screen flex flex-col">
       <main className="flex flex-col items-center flex-1 mt-6">
         <p className="text-lg">
-          {t.welcome}{" "}
+          ยินดีต้อนรับ{" "}
           <span className="text-orange-500 font-semibold">
-            {user?.nickname ?? user?.name ?? t.name}
+            {user?.nickname ?? user?.name ?? "ผู้ใช้"}
           </span>
         </p>
 
         <div className="w-full max-w-md mt-6 flex flex-col gap-4 px-6">
           {loading ? (
-            <p className="text-gray-500 text-center">{t.loading}</p>
+            <p className="text-gray-500 text-center">กำลังโหลด...</p>
           ) : (
             canteens.map((c) => (
               <Link
                 key={c._id}
                 to={`/canteen/${c._id}`}
-                className="flex justify-between items-center border-2 rounded-xl px-4 py-3 shadow hover:bg-gray-50 transition"
-                style={{
-                  borderColor:
-                    c.status === "High"
-                      ? "red"
-                      : c.status === "Medium"
-                      ? "orange"
-                      : "green",
-                }}
+                className="flex justify-between items-center border-2 rounded-xl px-4 py-3 shadow"
               >
                 <span>{c.name}</span>
                 <span>
@@ -265,91 +242,151 @@ export default function Home({ lang }: HomeProps) {
             ))
           )}
         </div>
-
-        {notification && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
-            {notification}
-          </div>
-        )}
       </main>
 
+      {/* ปุ่มเช็คอินจากการจอง */}
       {reservation && (
-        <>
-          <button
-            onClick={() => {
-              setShowPopup(true);
-              scanProcessedRef.current = false;
-            }}
-            className="fixed bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition"
-          >
-            <FiClipboard size={24} />
-          </button>
+        <button
+          onClick={() => {
+            scanProcessedRef.current = false; // ⭐ reset ก่อนเปิด
+            setShowPopup(true);
+          }}
+          className="fixed bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg"
+        >
+          <FiClipboard size={24} />
+        </button>
+      )}
 
-          {showPopup && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-              <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                <h2 className="text-xl font-bold mb-3 text-gray-800">การจองของคุณ</h2>
-                <p className="mb-3 text-gray-700 text-sm">
-                  คุณได้จองโต๊ะเรียบร้อยแล้ว
-                  <br />
-                  เลือกการกระทำต่อไป
-                </p>
+      {/* ปุ่มจัดการโต๊ะ */}
+      <button
+        onClick={() => {
+          scanProcessedRef.current = false; // ⭐ reset ก่อนเปิด
+          setShowTableControl(true);
+        }}
+        className="fixed bottom-6 left-6 bg-purple-600 text-white p-4 rounded-full shadow-lg"
+      >
+        โต๊ะ
+      </button>
 
-                {!scanning ? (
-                  <div className="flex justify-between gap-3">
-                    <button
-                      onClick={() => {
-                        setScanning(true);
-                        setScanError("");
-                        scanProcessedRef.current = false;
-                      }}
-                      className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition text-sm"
-                    >
-                      สแกน QR Code
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition text-sm"
-                    >
-                      ยกเลิกการจอง
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 w-full">
-                    <QrReader
-                      onResult={(result, error) => {
-                        if (result && !scanProcessedRef.current) {
-                          scanProcessedRef.current = true;
-                          setScanning(false);
-                          handleScanQR(result.getText());
-                        }
-                        if (error) console.error(error);
-                      }}
-                      constraints={{ facingMode: "environment" }}
-                      containerStyle={{ width: "100%" }}
-                    />
-                    {scanError && <p className="text-red-500 text-sm">{scanError}</p>}
-                    <button
-                      onClick={() => setScanning(false)}
-                      className="mt-2 text-gray-500 underline text-sm"
-                    >
-                      ยกเลิกสแกน
-                    </button>
-                  </div>
-                )}
+      {/* Popup เช็คอิน (มีการจอง) */}
+      {showPopup && reservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 text-center">
+            <h2 className="text-lg font-bold mb-2">เช็คอินการจอง</h2>
 
+            <p className="text-sm text-gray-600 mb-3">
+              กรุณาสแกน QR Code ที่โต๊ะ
+            </p>
+
+            <div className="w-full overflow-hidden rounded-xl mb-4">
+              <QrReader
+                onResult={(result) => {
+                  if (!result) return;
+                  if (scanProcessedRef.current) return;
+
+                  scanProcessedRef.current = true;
+                  handleScanQR(result.getText());
+                }}
+                constraints={{ facingMode: "environment" }}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleCancel}
+                className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold"
+              >
+                ❌ ยกเลิกการจอง
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowPopup(false);
+                  scanProcessedRef.current = false;
+                }}
+                className="text-gray-500 underline text-sm"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Popup จัดการโต๊ะ */}
+      {showTableControl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm text-center">
+            <h2 className="text-lg font-bold mb-4">จัดการสถานะโต๊ะ</h2>
+
+            {!tableScanMode ? (
+              <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => setShowPopup(false)}
-                  className="mt-3 text-gray-500 underline text-sm"
+                  onClick={() => {
+                    scanProcessedRef.current = false;
+                    setTableScanMode("checkin");
+                  }}
+                  className="bg-red-500 text-white py-2 rounded-lg"
                 >
-                  ปิด
+                  🚫 ทำให้โต๊ะไม่ว่าง
+                </button>
+                <button
+                  onClick={() => {
+                    scanProcessedRef.current = false;
+                    setTableScanMode("activate");
+                  }}
+                  className="bg-green-500 text-white py-2 rounded-lg"
+                >
+                  ✅ ทำให้โต๊ะว่าง
                 </button>
               </div>
-            </div>
-          )}
-        </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-2">
+                  กรุณาสแกน QR Code ที่โต๊ะ
+                </p>
+                <QrReader
+                  onResult={(result) => {
+                    if (!result) return;
+                    if (scanProcessedRef.current) return;
+
+                    scanProcessedRef.current = true;
+
+                    setShowTableControl(false);
+                    setTableScanMode(null);
+
+                    handleTableControlScan(result.getText());
+                  }}
+                  constraints={{ facingMode: "environment" }}
+                  containerStyle={{ width: "100%" }}
+                />
+              </>
+            )}
+
+            <button
+              onClick={() => {
+                setShowTableControl(false);
+                setTableScanMode(null);
+              }}
+              className="mt-4 text-gray-500 underline text-sm"
+            >
+              ปิด
+            </button>
+          </div>
+        </div>
+      )}
+
+      {notification && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
+          {notification}
+        </div>
       )}
     </div>
   );
 }
+
+
+
+
 
