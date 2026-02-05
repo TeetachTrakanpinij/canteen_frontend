@@ -210,32 +210,39 @@ export default function Home({ lang }: HomeProps) {
   };
 
   /* ================= Scan check-in (มีการจอง) ================= */
-  const handleScanQR = async (tableId: string) => {
-    try {
-      await fetch(
-        `https://canteen-backend-igyy.onrender.com/api/tables/${tableId}/checkin`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const handleScanQR = async (tableToken: string) => {
+  try {
+    const res = await fetch(
+      `https://canteen-backend-igyy.onrender.com/api/tables/${tableToken}/checkin`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-      localStorage.removeItem("activeReservation");
-      setReservation(null);
+    const data = await res.json();
 
-      setNotification("✅ เช็คอินสำเร็จ");
-      setTimeout(() => setNotification(""), 3000);
-
-      setShowPopup(false);
-      fetchCanteens();
-    } catch (err: any) {
-      setScanError(err.message);
-      scanProcessedRef.current = false;
+    if (!res.ok) {
+      throw new Error(data.message || "Check-in failed");
     }
-  };
+
+    localStorage.removeItem("activeReservation");
+    setReservation(null);
+
+    setNotification("✅ เช็คอินสำเร็จ");
+    setTimeout(() => setNotification(""), 3000);
+
+    setShowPopup(false);
+    fetchCanteens();
+  } catch (err: any) {
+    setNotification("❌ เช็คอินไม่สำเร็จ");
+    scanProcessedRef.current = false;
+  }
+};
+
 
   /* ================= Scan table control (ไม่สนการจอง) ================= */
   const handleTableControlScan = async (tableToken: string) => {
