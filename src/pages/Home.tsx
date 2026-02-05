@@ -38,6 +38,15 @@ export default function Home({ lang }: HomeProps) {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
   const [notification, setNotification] = useState("");
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const serverDownRef = useRef(false);
+  const notificationTimerRef = useRef<number | null>(null);
+  const lastScanRef = useRef<string | null>(null);
+  const scanLockRef = useRef(false);
+  
+
+
+
 
   // ⭐ state สำหรับจัดการโต๊ะ
   const [showTableControl, setShowTableControl] = useState(false);
@@ -85,34 +94,81 @@ export default function Home({ lang }: HomeProps) {
     return () => clearTimeout(timer);
   }, [reservation]);
 
+  const showNotification = (msg: string) => {
+  setNotification(msg);
+
+  if (notificationTimerRef.current) {
+    clearTimeout(notificationTimerRef.current);
+  }
+
+  notificationTimerRef.current = window.setTimeout(() => {
+    setNotification("");
+    notificationTimerRef.current = null;
+  }, 3000);
+};
+
   /* ================= Fetch canteens ================= */
   const fetchCanteens = async () => {
-    try {
-      const res = await fetch(
-        "https://canteen-backend-igyy.onrender.com/api/canteen/",
-        {
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              }
-            : undefined,
-        }
-      );
-      const data: Canteen[] = await res.json();
-      setCanteens(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  try {
+    const res = await fetch(
+      "https://canteen-backend-igyy.onrender.com/api/canteen/",
+      {
+        headers: token
+          ? {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            }
+          : undefined,
+      }
+    );
+
+    if (!res.ok) throw new Error("Server error");
+
+    const data: Canteen[] = await res.json();
+    setCanteens(data);
+
+    // ✅ ถ้า server เคยล่ม แล้วตอนนี้กลับมา
+    if (serverDownRef.current) {
+      serverDownRef.current = false;
+      setNotification("✅ เชื่อมต่อเซิร์ฟเวอร์อีกครั้งแล้ว");
+      
+
+      // 🔁 เปิด interval ใหม่
+      intervalRef.current = setInterval(fetchCanteens, 3000);
     }
-  };
+  } catch (err) {
+    // 🛑 เจอ error ครั้งแรก → หยุด interval ทันที
+    if (!serverDownRef.current) {
+      serverDownRef.current = true;
+      setNotification("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์");
+      
+
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
-    fetchCanteens();
-    const interval = setInterval(fetchCanteens, 3000);
-    return () => clearInterval(interval);
-  }, [token]);
+  fetchCanteens();
+
+  intervalRef.current = setInterval(fetchCanteens, 3000);
+
+  return () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+}, [token]);
+
+
+
 
   /* ================= Fetch user ================= */
   useEffect(() => {
@@ -182,14 +238,15 @@ export default function Home({ lang }: HomeProps) {
   };
 
   /* ================= Scan table control (ไม่สนการจอง) ================= */
-  const handleTableControlScan = async (tableId: string) => {
+  const handleTableControlScan = async (tableToken: string) => {
+    console.log("🚀 SEND TABLE ID TO API =", tableToken);
     const endpoint =
       tableScanMode === "checkin"
-        ? `/api/reservation/${tableId}/checkin`
-        : `/api/reservation/${tableId}/activate`;
+        ? `/api/reservation/${tableToken}/mark`
+        : `/api/reservation/${tableToken}/activate`;
 
     try {
-      await fetch(
+      const res = await fetch(
         `https://canteen-backend-igyy.onrender.com${endpoint}`,
         {
           method: "PUT",
@@ -200,18 +257,50 @@ export default function Home({ lang }: HomeProps) {
         }
       );
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          setNotification("❌ โต๊ะนี้ถูกล็อกโดยผู้ใช้อื่น");
+        } else {
+          setNotification(data.message || "❌ ดำเนินการไม่สำเร็จ");
+        }
+        return;
+      }
+
       setNotification(
         tableScanMode === "checkin"
           ? "🚫 โต๊ะถูกตั้งเป็นไม่ว่างแล้ว"
           : "✅ โต๊ะกลับมาเป็นว่างแล้ว"
       );
-      setTimeout(() => setNotification(""), 3000);
 
+      setTimeout(() => setNotification(""), 3000);
       fetchCanteens();
-    } catch {
-      setNotification("❌ ดำเนินการไม่สำเร็จ");
+    } catch (err) {
+      setNotification("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์");
     }
+    finally {
+  setTimeout(() => {
+    scanLockRef.current = false;
+  }, 1500); // หน่วงให้ยก QR ออกก่อน
+}
+
+
   };
+
+
+  const getStatusColor = (blocked = 0, total = 50) => {
+  const percent = (blocked / total) * 100;
+
+  if (percent <= 35) {
+    return "border-green-500 bg-green-50";
+  } else if (percent <= 75) {
+    return "border-yellow-500 bg-yellow-50";
+  } else {
+    return "border-red-500 bg-red-50";
+  }
+};
+
 
   /* ================= UI ================= */
   return (
@@ -228,20 +317,28 @@ export default function Home({ lang }: HomeProps) {
           {loading ? (
             <p className="text-gray-500 text-center">กำลังโหลด...</p>
           ) : (
-            canteens.map((c) => (
-              <Link
-                key={c._id}
-                to={`/canteen/${c._id}`}
-                className="flex justify-between items-center border-2 rounded-xl px-4 py-3 shadow"
-              >
-                <span>{c.name}</span>
-                <span>
-                  {c.blockedTables ?? 0}/{c.totalTables ?? 50}
-                </span>
-              </Link>
-            ))
+            canteens.map((c) => {
+              const blocked = c.blockedTables ?? 0;
+              const total = c.totalTables ?? 50;
+
+              return (
+                <Link
+                  key={c._id}
+                  to={`/canteen/${c._id}`}
+                  className={`flex justify-between items-center 
+                    border-2 rounded-xl px-4 py-3 shadow
+                    ${getStatusColor(blocked, total)}`}
+                >
+                  <span className="font-medium">{c.name}</span>
+                  <span className="font-semibold">
+                    {blocked}/{total}
+                  </span>
+                </Link>
+              );
+            })
           )}
         </div>
+
       </main>
 
       {/* ปุ่มเช็คอินจากการจอง */}
@@ -259,14 +356,23 @@ export default function Home({ lang }: HomeProps) {
 
       {/* ปุ่มจัดการโต๊ะ */}
       <button
+        disabled={serverDownRef.current}
         onClick={() => {
-          scanProcessedRef.current = false; // ⭐ reset ก่อนเปิด
+          if (serverDownRef.current) return;
+
+          scanProcessedRef.current = false;
           setShowTableControl(true);
         }}
-        className="fixed bottom-6 left-6 bg-purple-600 text-white p-4 rounded-full shadow-lg"
+        className={`fixed bottom-6 left-6 p-4 rounded-full shadow-lg
+          ${
+            serverDownRef.current
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-purple-600 text-white"
+          }`}
       >
         โต๊ะ
       </button>
+
 
       {/* Popup เช็คอิน (มีการจอง) */}
       {showPopup && reservation && (
@@ -347,20 +453,31 @@ export default function Home({ lang }: HomeProps) {
                   กรุณาสแกน QR Code ที่โต๊ะ
                 </p>
                 <QrReader
-                  onResult={(result) => {
-                    if (!result) return;
-                    if (scanProcessedRef.current) return;
-
-                    scanProcessedRef.current = true;
-
-                    setShowTableControl(false);
-                    setTableScanMode(null);
-
-                    handleTableControlScan(result.getText());
-                  }}
                   constraints={{ facingMode: "environment" }}
-                  containerStyle={{ width: "100%" }}
+                  scanDelay={500}
+                  onResult={(result) => {
+                    console.log("🔥 onResult fired");
+                    if (!result) {
+                      console.log("❌ no result");
+                      return;
+                    }
+                    if (scanLockRef.current) return;
+
+                    const scannedText = result.getText().trim();
+
+                    if (!scannedText) return;
+                    if (scannedText === lastScanRef.current) return;
+
+                    console.log("📸 QR RAW TEXT =", scannedText);
+
+                    scanLockRef.current = true;
+                    lastScanRef.current = scannedText;
+
+                    handleTableControlScan(scannedText);
+                  }}
                 />
+
+
               </>
             )}
 
