@@ -46,7 +46,7 @@ export default function App() {
           <Route element={<Layout lang={lang} setLang={handleSetLang} isLoggedIn={isLoggedIn} />}>
             <Route path="/" element={<Home lang={lang} />} />
             <Route path="/canteen/:canteenId" element={<CanteenDetail lang={lang} />} />
-            <Route path="/tables/:tableId" element={<ReservationPage />} />
+            <Route path="/tables/:tableId" element={<ReservationPage lang={lang} />} />
             <Route path="/canteen/:canteenId/inns/:innId/menu" element={<MenuPage />} />
             <Route path="/Guide" element={<GuidePage />} />
           </Route>
