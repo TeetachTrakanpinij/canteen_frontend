@@ -55,6 +55,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       normal: "ปกติ",
       medium: "ปานกลาง",
       high: "สูง",
+      queue: "คิว"
     },
     en: {
       loading: "Loading...",
@@ -69,6 +70,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
       normal: "Normal",
       medium: "Medium",
       high: "High",
+      queue: "Queue"
     },
   }[lang];
 
@@ -198,7 +200,7 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
                 {/* คิว (ไม่แสดงถ้าเป็น storage) */}
                 {!isStorage && (
                   <span className="text-xs text-gray-600">
-                    คิว: {inn.queueCount}
+                    {t.queue}: {inn.queueCount}
                   </span>
                 )}
               </div>

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FiClipboard } from "react-icons/fi";
 import { QrReader } from "react-qr-reader";
+import { MdTableRestaurant } from "react-icons/md";
+
 
 interface Canteen {
   _id: string;
@@ -43,6 +45,44 @@ export default function Home({ lang }: HomeProps) {
   const notificationTimerRef = useRef<number | null>(null);
   const lastScanRef = useRef<string | null>(null);
   const scanLockRef = useRef(false);
+
+  const translations = {
+  th: {
+    welcome: "ยินดีต้อนรับ",
+    loading: "กำลังโหลด...",
+    checkinReservation: "เช็คอินการจอง",
+    scanQR: "กรุณาสแกน QR Code ที่โต๊ะ",
+    cancelReservation: "ยกเลิกการจอง",
+    close: "ปิด",
+    tableManagement: "จัดการสถานะโต๊ะ",
+    makeUnavailable: "ทำให้โต๊ะไม่ว่าง",
+    makeAvailable: "ทำให้โต๊ะว่าง",
+    user: "ผู้ใช้",
+    canteen:"โรงอาหาร",
+    tablestatus: "จัดการสถานะโต๊ะ",
+    off: "ทำให้โต๊ะไม่ว่าง",
+    on: "ทำให้โต๊ะว่าง"
+  },
+  en: {
+    welcome: "Welcome",
+    loading: "Loading...",
+    checkinReservation: "Reservation Check-in",
+    scanQR: "Please scan the QR code at the table",
+    cancelReservation: "Cancel Reservation",
+    close: "Close",
+    tableManagement: "Table Management",
+    makeUnavailable: "Mark as Unavailable",
+    makeAvailable: "Mark as Available",
+    user: "User",
+    canteen: "Canteen",
+    tablestatus: "Manage table status",
+    off: "Unavailable",
+    on: "Avilable"
+  }
+};
+
+const t = translations[lang];
+
   
 
 
@@ -314,15 +354,15 @@ export default function Home({ lang }: HomeProps) {
     <div className="font-thai bg-white min-h-screen flex flex-col">
       <main className="flex flex-col items-center flex-1 mt-6">
         <p className="text-lg">
-          ยินดีต้อนรับ{" "}
+          {t.welcome}{" "}
           <span className="text-orange-500 font-semibold">
-            {user?.nickname ?? user?.name ?? "ผู้ใช้"}
+            {user?.nickname ?? user?.name ?? t.user}
           </span>
         </p>
 
         <div className="w-full max-w-md mt-6 flex flex-col gap-4 px-6">
           {loading ? (
-            <p className="text-gray-500 text-center">กำลังโหลด...</p>
+            <p className="text-gray-500 text-center">{t.loading}</p>
           ) : (
             canteens.map((c) => {
               const blocked = c.blockedTables ?? 0;
@@ -336,7 +376,7 @@ export default function Home({ lang }: HomeProps) {
                     border-2 rounded-xl px-4 py-3 shadow
                     ${getStatusColor(blocked, total)}`}
                 >
-                  <span className="font-medium">{c.name}</span>
+                  <span className="font-medium">{t.canteen} {c.name}</span>
                   <span className="font-semibold">
                     {blocked}/{total}
                   </span>
@@ -370,14 +410,14 @@ export default function Home({ lang }: HomeProps) {
           scanProcessedRef.current = false;
           setShowTableControl(true);
         }}
-        className={`fixed bottom-6 left-6 p-4 rounded-full shadow-lg
+        className={`fixed bottom-6 left-6 p-4 rounded-full shadow-lg flex items-center justify-center
           ${
             serverDownRef.current
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-purple-600 text-white"
           }`}
       >
-        โต๊ะ
+        <MdTableRestaurant size={24} />
       </button>
 
 
@@ -385,10 +425,10 @@ export default function Home({ lang }: HomeProps) {
       {showPopup && reservation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 text-center">
-            <h2 className="text-lg font-bold mb-2">เช็คอินการจอง</h2>
+            <h2 className="text-lg font-bold mb-2">{t.checkinReservation}</h2>
 
             <p className="text-sm text-gray-600 mb-3">
-              กรุณาสแกน QR Code ที่โต๊ะ
+              {t.scanQR}
             </p>
 
             <div className="w-full overflow-hidden rounded-xl mb-4">
@@ -409,7 +449,7 @@ export default function Home({ lang }: HomeProps) {
                 onClick={handleCancel}
                 className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold"
               >
-                ❌ ยกเลิกการจอง
+                ❌ {t.cancelReservation}
               </button>
 
               <button
@@ -419,7 +459,7 @@ export default function Home({ lang }: HomeProps) {
                 }}
                 className="text-gray-500 underline text-sm"
               >
-                ปิด
+                {t.close}
               </button>
             </div>
           </div>
@@ -431,7 +471,7 @@ export default function Home({ lang }: HomeProps) {
       {showTableControl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm text-center">
-            <h2 className="text-lg font-bold mb-4">จัดการสถานะโต๊ะ</h2>
+            <h2 className="text-lg font-bold mb-4">{t.tablestatus}</h2>
 
             {!tableScanMode ? (
               <div className="flex flex-col gap-3">
@@ -442,7 +482,7 @@ export default function Home({ lang }: HomeProps) {
                   }}
                   className="bg-red-500 text-white py-2 rounded-lg"
                 >
-                  🚫 ทำให้โต๊ะไม่ว่าง
+                  🚫 {t.off}
                 </button>
                 <button
                   onClick={() => {
@@ -451,13 +491,13 @@ export default function Home({ lang }: HomeProps) {
                   }}
                   className="bg-green-500 text-white py-2 rounded-lg"
                 >
-                  ✅ ทำให้โต๊ะว่าง
+                  ✅ {t.on}
                 </button>
               </div>
             ) : (
               <>
                 <p className="text-sm text-gray-600 mb-2">
-                  กรุณาสแกน QR Code ที่โต๊ะ
+                  {t.scanQR}
                 </p>
                 <QrReader
                   constraints={{ facingMode: "environment" }}
@@ -495,7 +535,7 @@ export default function Home({ lang }: HomeProps) {
               }}
               className="mt-4 text-gray-500 underline text-sm"
             >
-              ปิด
+              {t.close}
             </button>
           </div>
         </div>
