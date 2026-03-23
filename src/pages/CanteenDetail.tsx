@@ -169,7 +169,10 @@ export default function CanteenDetail({ lang }: CanteenDetailProps) {
             <option value="Unavailable">{t.unavailable}</option>
           </select>
         </div>
-
+        {/* 🔥 หมายเหตุ */}
+          <span className="text-base text-red-600 font-semibold">
+            * หมายเหตุ: สามารถจองโต๊ะได้เฉพาะโต๊ะโซน A เท่านั้น คือ JA01 - JA09 *
+          </span>
       </div>
 
       {/* ===== SINGLE CANTEEN MAP ===== */}
